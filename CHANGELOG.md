@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.1 — 2026-09-28
+
+- New coral icon with a simple quota-bar mark.
+- Shorter README with installation and account setup first.
+
 ## 1.1.0 — 2026-09-28
 
 - Prebuilt ZIP installation through Raycast's Import Extension command; no terminal or build tools required.
