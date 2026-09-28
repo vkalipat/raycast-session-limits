@@ -1,0 +1,47 @@
+name: Bug report
+description: Report incorrect quota readings, connection problems, or Raycast behavior.
+title: "[Bug]: "
+body:
+  - type: markdown
+    attributes:
+      value: "Please share only sanitized information. Do not upload tokens, authentication files, raw session logs, or account identifiers."
+  - type: input
+    id: versions
+    attributes:
+      label: Versions
+      description: Extension release, Raycast version, macOS version, and provider CLI version if relevant.
+      placeholder: "Session Limits 1.x; Raycast 2.x; macOS ..."
+    validations:
+      required: true
+  - type: dropdown
+    id: provider
+    attributes:
+      label: Affected provider or feature
+      options:
+        - Codex
+        - Claude Code
+        - Custom provider
+        - Dashboard
+        - Menu bar
+        - Installation or update
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: Steps to reproduce
+      description: Include whether this happens in the dashboard, menu bar, or both.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected and actual behavior
+      description: For quota discrepancies, include the displayed data age and whether refreshing changes the result.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized error or screenshot
+      description: Remove account details and sensitive information before sharing. Do not attach credential files.

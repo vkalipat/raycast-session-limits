@@ -1,0 +1,35 @@
+name: Provider request
+description: Suggest a new coding assistant quota adapter or improve provider compatibility.
+title: "[Provider]: "
+body:
+  - type: input
+    id: provider
+    attributes:
+      label: Provider and product
+      placeholder: Provider name and official product URL
+    validations:
+      required: true
+  - type: textarea
+    id: quota
+    attributes:
+      label: Quotas to display
+      description: Which measured subscription limits and reset times does the provider expose?
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Public compatibility references
+      description: Link official API or CLI documentation, or a public implementation and its license. If no reference is known, say so.
+    validations:
+      required: true
+  - type: textarea
+    id: authentication
+    attributes:
+      label: Authentication and availability
+      description: Describe the sign-in method, supported plans, and platforms if known. Never paste tokens or credentials.
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context
+      description: Can a custom local snapshot meet this need? Are you able to help test a future adapter?

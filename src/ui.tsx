@@ -1,7 +1,18 @@
-import { Action, ActionPanel, Color, Detail, Icon, Keyboard, openExtensionPreferences } from "@raycast/api";
+import {
+  Action,
+  ActionPanel,
+  Color,
+  Detail,
+  environment,
+  Icon,
+  Keyboard,
+  openExtensionPreferences,
+} from "@raycast/api";
 import { formatObserved, formatReset, isStale, remainingPercent } from "./core/format";
 import type { ProviderState, UsageWindow } from "./core/types";
 import { useLimits } from "./use-limits";
+import { useState } from "react";
+import { quotaGauge } from "./core/gauge";
 
 export function quotaColor(window: UsageWindow): Color {
   const remaining = remainingPercent(window);
@@ -10,6 +21,7 @@ export function quotaColor(window: UsageWindow): Color {
 
 export function providerStatus(provider: ProviderState): string {
   if (provider.status === "setup") return "Not Connected";
+  if (provider.status === "waiting") return "Waiting for Claude Code";
   if (provider.status === "error")
     return provider.snapshot ? "Refresh failed · previous reading" : "Unavailable";
   return provider.snapshot && isStale(provider.snapshot) ? "Stale reading" : "Current reading";
@@ -37,12 +49,16 @@ export function ProviderActions({
   connect,
   disconnect,
   detail = false,
+  windowId,
+  onSelectWindow,
 }: {
   provider: ProviderState;
   refresh: () => Promise<void>;
   connect: (id: string) => Promise<void>;
   disconnect: (id: string) => Promise<void>;
   detail?: boolean;
+  windowId?: string;
+  onSelectWindow?: (id: string) => void;
 }) {
   const dashboardUrl = providerDashboard(provider);
   return (
@@ -54,8 +70,20 @@ export function ProviderActions({
         <Action.Push
           title="Show Details"
           icon={Icon.Sidebar}
-          target={<ProviderDetail initialProvider={provider} />}
+          target={<ProviderDetail initialProvider={provider} initialWindowId={windowId} />}
         />
+      )}
+      {onSelectWindow && (provider.snapshot?.windows.length ?? 0) > 1 && (
+        <ActionPanel.Submenu title="Switch Limit" icon={Icon.Gauge}>
+          {provider.snapshot?.windows.map((window) => (
+            <Action
+              key={window.id}
+              title={window.label}
+              icon={window.id === windowId ? Icon.Checkmark : Icon.Gauge}
+              onAction={() => onSelectWindow(window.id)}
+            />
+          ))}
+        </ActionPanel.Submenu>
       )}
       <Action
         title="Refresh Limits"
@@ -63,10 +91,12 @@ export function ProviderActions({
         shortcut={Keyboard.Shortcut.Common.Refresh}
         onAction={refresh}
       />
-      {provider.id === "claude" && provider.snapshot && !provider.needsConnection && (
-        <Action title="Reconnect Claude Code" icon={Icon.Link} onAction={() => connect(provider.id)} />
-      )}
-      {provider.id === "claude" && provider.snapshot && (
+      {provider.id === "claude" &&
+        provider.bridgeConnected &&
+        (provider.status === "ready" || provider.status === "waiting") && (
+          <Action title="Reconnect Claude Code" icon={Icon.Link} onAction={() => connect(provider.id)} />
+        )}
+      {provider.id === "claude" && provider.bridgeConnected && (
         <Action title="Disconnect Claude Code" icon={Icon.Logout} onAction={() => disconnect(provider.id)} />
       )}
       {dashboardUrl && <Action.OpenInBrowser title="Open Provider Dashboard" url={dashboardUrl} />}
@@ -75,7 +105,14 @@ export function ProviderActions({
   );
 }
 
-export function ProviderDetail({ initialProvider }: { initialProvider: ProviderState }) {
+export function ProviderDetail({
+  initialProvider,
+  initialWindowId,
+}: {
+  initialProvider: ProviderState;
+  initialWindowId?: string;
+}) {
+  const [selectedWindowId, setSelectedWindowId] = useState(initialWindowId);
   const { providers, isLoading, refresh, connect, disconnect } = useLimits();
   const currentProvider = providers.find((item) => item.id === initialProvider.id);
   const removed = !isLoading && !currentProvider;
@@ -90,35 +127,49 @@ export function ProviderDetail({ initialProvider }: { initialProvider: ProviderS
           error: "Provider no longer available. Return to the list to view your enabled providers.",
         });
   const snapshot = provider.snapshot;
-  const markdown = [
-    `# ${escapeMarkdown(provider.name)}`,
-    `**${providerStatus(provider)}**`,
-    provider.error ? escapeMarkdown(provider.error) : "",
-    ...(snapshot?.windows.map(
-      (window) =>
-        `### ${escapeMarkdown(window.label)}\n\n**${remainingPercent(window)}% remaining** · ${window.usedPercent}% used\n\n${escapeMarkdown(formatReset(window.resetAt))}${window.resetAt && Number.isFinite(Date.parse(window.resetAt)) ? `\n\nReset time: ${escapeMarkdown(new Date(window.resetAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "long" }))}` : ""}`,
-    ) ?? []),
-    !snapshot && !removed ? "Connect your existing account to show its limits." : "",
-    snapshot && isStale(snapshot)
-      ? "This reading may no longer reflect your current quota. A passed reset time does not confirm that usage has returned to zero."
-      : "",
-  ]
-    .filter(Boolean)
-    .join("\n\n");
+  const window = snapshot?.windows.find((item) => item.id === selectedWindowId) ?? snapshot?.windows[0];
+  const outdated = provider.status !== "ready" || !!(snapshot && isStale(snapshot));
+  const measured = window && Number.isFinite(window.usedPercent);
+  const markdown = measured
+    ? [
+        `![${remainingPercent(window)}% remaining${outdated ? "; previous reading" : ""}](${quotaGauge(remainingPercent(window), environment.appearance, outdated)})`,
+        outdated
+          ? "**Previous reading** · Refresh for current limits."
+          : escapeMarkdown(formatReset(window.resetAt)),
+        provider.error ? escapeMarkdown(provider.error) : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n")
+    : [
+        `# ${escapeMarkdown(provider.name)}`,
+        `**${providerStatus(provider)}**`,
+        provider.error ? escapeMarkdown(provider.error) : "",
+        !snapshot && !removed && provider.needsConnection
+          ? "Connect Claude Code to add a local status-line integration. It saves quota readings while Claude Code is active and preserves your existing status line. Requires Claude Code 2.1.251 or later."
+          : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
   return (
     <Detail
       isLoading={isLoading}
-      navigationTitle={provider.name}
+      navigationTitle={window ? `${provider.name} · ${window.label}` : provider.name}
       markdown={markdown}
       metadata={
         snapshot ? (
           <Detail.Metadata>
+            {window?.resetAt && Number.isFinite(Date.parse(window.resetAt)) && (
+              <Detail.Metadata.Label
+                title="Reset Time"
+                text={new Date(window.resetAt).toLocaleString(undefined, {
+                  dateStyle: "medium",
+                  timeStyle: "long",
+                })}
+              />
+            )}
+            <Detail.Metadata.Separator />
             <Detail.Metadata.Label title="Status" text={providerStatus(provider)} />
             <Detail.Metadata.Label title="Observed" text={formatObserved(snapshot.updatedAt)} />
-            <Detail.Metadata.Label
-              title="Observation Time"
-              text={new Date(snapshot.updatedAt).toLocaleString()}
-            />
             <Detail.Metadata.Label title="Source" text={snapshot.source} />
             {snapshot.plan && <Detail.Metadata.Label title="Plan" text={snapshot.plan} />}
           </Detail.Metadata>
@@ -131,6 +182,8 @@ export function ProviderDetail({ initialProvider }: { initialProvider: ProviderS
           connect={connect}
           disconnect={disconnect}
           detail
+          windowId={window?.id}
+          onSelectWindow={setSelectedWindowId}
         />
       }
     />

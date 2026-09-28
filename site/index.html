@@ -1,0 +1,446 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#faf8f5" />
+    <title>Session Limits — Codex &amp; Claude Code quotas in Raycast</title>
+    <meta
+      name="description"
+      content="See your Codex and Claude Code usage limits, remaining quota, and reset times in Raycast. Free, open source, and local to your Mac."
+    />
+    <link rel="canonical" href="https://vkalipat.github.io/raycast-session-limits/" />
+    <link rel="icon" href="assets/icon.png" type="image/png" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="Session Limits — Know what’s left." />
+    <meta
+      property="og:description"
+      content="Codex and Claude Code quotas, reset times, and a visual usage gauge. Right in Raycast."
+    />
+    <meta property="og:url" content="https://vkalipat.github.io/raycast-session-limits/" />
+    <meta
+      property="og:image"
+      content="https://vkalipat.github.io/raycast-session-limits/media/session-limits-detail.png"
+    />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Session Limits",
+        "description": "Codex and Claude Code usage limits, remaining quotas, and reset times in Raycast.",
+        "applicationCategory": "DeveloperApplication",
+        "operatingSystem": "macOS",
+        "softwareRequirements": "Raycast",
+        "url": "https://vkalipat.github.io/raycast-session-limits/",
+        "downloadUrl": "https://github.com/vkalipat/raycast-session-limits/releases/latest/download/session-limits.zip",
+        "codeRepository": "https://github.com/vkalipat/raycast-session-limits",
+        "license": "https://opensource.org/license/mit",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
+      }
+    </script>
+    <style>
+      :root {
+        color-scheme: light;
+        --paper: #faf8f5;
+        --ink: #242422;
+        --muted: #62615c;
+        --accent: #b82e21;
+        --line: #dfddd7;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        background: var(--paper);
+        color: var(--ink);
+        font:
+          17px/1.6 -apple-system,
+          BlinkMacSystemFont,
+          "Segoe UI",
+          sans-serif;
+      }
+      a {
+        color: var(--accent);
+        text-underline-offset: 0.2em;
+      }
+      a:focus-visible {
+        outline: 3px solid var(--accent);
+        outline-offset: 5px;
+      }
+      .skip {
+        position: absolute;
+        top: -100px;
+        left: 20px;
+        padding: 12px;
+        background: white;
+        z-index: 2;
+      }
+      .skip:focus {
+        top: 12px;
+      }
+      .wrap {
+        width: min(1080px, calc(100% - 48px));
+        margin: auto;
+      }
+      header {
+        padding: 28px 0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 20px;
+      }
+      .brand {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        font-weight: 650;
+        text-decoration: none;
+        color: var(--ink);
+      }
+      .brand img {
+        width: 36px;
+        height: 36px;
+      }
+      header > a {
+        font-size: 14px;
+        color: var(--muted);
+      }
+      .hero {
+        padding: 78px 0 68px;
+        max-width: 850px;
+      }
+      .eyebrow {
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--accent);
+        margin: 0 0 18px;
+      }
+      h1 {
+        font-size: clamp(48px, 7.2vw, 84px);
+        line-height: 1.04;
+        letter-spacing: -0.055em;
+        font-weight: 650;
+        margin: 0 0 26px;
+      }
+      .intro {
+        max-width: 630px;
+        color: var(--muted);
+        font-size: 22px;
+        line-height: 1.5;
+        margin: 0 0 30px;
+      }
+      .actions {
+        display: flex;
+        gap: 14px;
+        align-items: center;
+        flex-wrap: wrap;
+      }
+      .button {
+        display: inline-block;
+        padding: 13px 21px;
+        border: 1px solid var(--line);
+        border-radius: 9px;
+        color: var(--ink);
+        font-size: 15px;
+        font-weight: 650;
+        text-decoration: none;
+      }
+      .button.primary {
+        color: white;
+        background: var(--accent);
+        border-color: var(--accent);
+      }
+      .button:hover {
+        border-color: var(--ink);
+      }
+      .button.primary:hover {
+        background: #94251b;
+        border-color: #94251b;
+      }
+      .note {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 15px 0 0;
+      }
+      .preview {
+        margin: 0;
+      }
+      .preview img {
+        display: block;
+        width: 100%;
+        height: auto;
+        border: 1px solid var(--line);
+        border-radius: 15px;
+        background: #eeeae5;
+      }
+      figcaption {
+        color: var(--muted);
+        font-size: 13px;
+        margin: 12px 0;
+      }
+      section {
+        padding: 66px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      h2 {
+        font-size: 32px;
+        line-height: 1.2;
+        letter-spacing: -0.025em;
+        margin: 0 0 28px;
+      }
+      h3 {
+        font-size: 19px;
+        line-height: 1.35;
+        margin: 0 0 10px;
+      }
+      p {
+        margin: 0 0 16px;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 36px;
+      }
+      .grid p,
+      .connect p {
+        color: var(--muted);
+        font-size: 16px;
+      }
+      .steps {
+        padding: 0;
+        margin: 0;
+        list-style: none;
+        counter-reset: steps;
+      }
+      .steps li {
+        counter-increment: steps;
+      }
+      .steps li::before {
+        content: "0" counter(steps);
+        display: block;
+        color: var(--accent);
+        font:
+          600 13px/1.5 ui-monospace,
+          monospace;
+        margin-bottom: 20px;
+      }
+      .connect {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 64px;
+        align-items: start;
+      }
+      .connect article + article {
+        margin-top: 26px;
+      }
+      .privacy {
+        padding: 26px;
+        border: 1px solid var(--line);
+        border-radius: 12px;
+      }
+      footer {
+        padding: 30px 0 42px;
+        display: flex;
+        justify-content: space-between;
+        gap: 24px;
+        color: var(--muted);
+        font-size: 13px;
+      }
+      footer nav {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 20px;
+      }
+      footer a {
+        color: var(--muted);
+      }
+      @media (max-width: 680px) {
+        .wrap {
+          width: calc(100% - 36px);
+        }
+        .hero {
+          padding: 48px 0;
+        }
+        .intro {
+          font-size: 19px;
+        }
+        .grid,
+        .connect {
+          grid-template-columns: 1fr;
+          gap: 28px;
+        }
+        section {
+          padding: 44px 0;
+        }
+        .steps li::before {
+          margin-bottom: 8px;
+        }
+        footer {
+          flex-direction: column;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <a class="skip" href="#main">Skip to content</a>
+    <div class="wrap">
+      <header>
+        <a class="brand" href="./"
+          ><img src="assets/icon.png" alt="" width="36" height="36" />Session Limits</a
+        >
+        <a href="https://github.com/vkalipat/raycast-session-limits">View source ↗</a>
+      </header>
+      <main id="main">
+        <div class="hero">
+          <p class="eyebrow">A free Raycast extension for Mac</p>
+          <h1>Know what’s left.<br />Keep building.</h1>
+          <p class="intro">
+            Your Codex and Claude Code quotas in one place. Check remaining usage, see when limits reset, and
+            keep a glanceable indicator in your menu bar.
+          </p>
+          <div class="actions">
+            <a
+              class="button primary"
+              href="https://github.com/vkalipat/raycast-session-limits/releases/latest/download/session-limits.zip"
+              >Download for Raycast ↓</a
+            >
+            <a class="button" href="https://github.com/vkalipat/raycast-session-limits">Star on GitHub ☆</a>
+          </div>
+          <p class="note">Free · MIT licensed · No terminal needed to install</p>
+        </div>
+        <figure class="preview">
+          <img
+            src="media/session-limits-detail.png"
+            alt="Session Limits detail view in Raycast, with a visual quota gauge and reset information."
+            width="2000"
+            height="1250"
+            fetchpriority="high"
+          />
+          <figcaption>Example readings shown for illustration.</figcaption>
+        </figure>
+        <section aria-label="Features">
+          <div class="grid">
+            <article>
+              <h3>One place to check</h3>
+              <p>
+                Session and weekly windows for Codex and Claude Code. A shared format keeps room for other
+                providers, too.
+              </p>
+            </article>
+            <article>
+              <h3>More than a number</h3>
+              <p>
+                A visual gauge, reset times, and reading freshness help you see what your remaining quota
+                actually means.
+              </p>
+            </article>
+            <article>
+              <h3>Stay in your flow</h3>
+              <p>
+                Open Raycast for the details, or enable the menu bar command for a quick glance while you
+                work.
+              </p>
+            </article>
+          </div>
+        </section>
+        <section id="install">
+          <p class="eyebrow">Start here</p>
+          <h2>Three steps. No install scripts.</h2>
+          <ol class="steps grid">
+            <li>
+              <h3>Download &amp; unzip</h3>
+              <p>
+                Get the ZIP above and open it in Finder. You’ll get a folder called
+                <strong>Session Limits</strong>.
+              </p>
+            </li>
+            <li>
+              <h3>Import into Raycast</h3>
+              <p>
+                Search for <strong>Import Extension</strong> in Raycast, then select that Session Limits
+                folder.
+              </p>
+            </li>
+            <li>
+              <h3>Check your limits</h3>
+              <p>
+                Run <strong>Show Session Limits</strong>. Open any quota row to see the gauge and reset
+                details.
+              </p>
+            </li>
+          </ol>
+          <p class="note">GitHub download available now. Raycast Store publication is pending review.</p>
+        </section>
+        <section class="connect">
+          <div>
+            <h2>Connect what you use.</h2>
+            <article>
+              <h3>Codex</h3>
+              <p>
+                Already signed in to Codex on this Mac? Session Limits reads quotas through the official Codex
+                CLI.
+              </p>
+            </article>
+            <article>
+              <h3>Claude Code</h3>
+              <p>
+                Choose <strong>Connect Claude Code</strong>, then use Claude Code to update your reading. Uses
+                its official status line quota data and preserves your existing status line. Requires Claude
+                Code 2.1.251+ and a Pro or Max plan.
+              </p>
+            </article>
+            <article>
+              <h3>Your own provider</h3>
+              <p>
+                Supply a local JSON snapshot using the documented format. The same quota view works with your
+                data.
+              </p>
+            </article>
+          </div>
+          <aside class="privacy">
+            <h3>Small by design.</h3>
+            <p>
+              No backend, no analytics, and no account with us. Claude’s connector reads quota data, without
+              requesting your tokens or Keychain access.
+            </p>
+            <p>
+              <a href="https://github.com/vkalipat/raycast-session-limits#privacy"
+                >Read about privacy and setup →</a
+              >
+            </p>
+          </aside>
+        </section>
+        <section>
+          <h2>Your limits, at a glance.</h2>
+          <figure class="preview">
+            <img
+              src="media/session-limits-dashboard.png"
+              alt="Session Limits dashboard in Raycast, listing provider quota windows and remaining usage."
+              width="2000"
+              height="1250"
+              loading="lazy"
+            />
+            <figcaption>Example readings shown for illustration.</figcaption>
+          </figure>
+          <p>
+            Missing a provider or have an idea?
+            <a href="https://github.com/vkalipat/raycast-session-limits/issues">Open an issue</a>. If this
+            saves you a few clicks, a GitHub star helps others find it.
+          </p>
+        </section>
+      </main>
+      <footer>
+        <span>Session Limits · Free &amp; open source</span>
+        <nav aria-label="Project links">
+          <a href="https://github.com/vkalipat/raycast-session-limits">GitHub</a
+          ><a href="https://github.com/vkalipat/raycast-session-limits/releases">Releases</a
+          ><a href="https://github.com/vkalipat/raycast-session-limits/blob/main/LICENSE">MIT License</a>
+        </nav>
+      </footer>
+    </div>
+  </body>
+</html>

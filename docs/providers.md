@@ -38,19 +38,29 @@ This is illustrative data, not a live integration. Replace timestamps and percen
 
 ## Compatibility
 
-| Adapter     | Authentication                                                                                 | Usage source                                |
-| ----------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------- |
-| Codex       | Existing subscription sign-in managed by the installed official Codex CLI                      | Codex app-server account rate limits        |
-| Claude Code | Credential file, or explicit **Connect Claude Code** using the existing macOS Keychain sign-in | `https://api.anthropic.com/api/oauth/usage` |
+| Adapter     | Setup                                                             | Usage source                                  |
+| ----------- | ----------------------------------------------------------------- | --------------------------------------------- |
+| Codex       | Existing subscription sign-in in the installed official Codex CLI | Codex app-server account rate limits          |
+| Claude Code | **Connect Claude Code**, then use Claude Code 2.1.251+            | Documented status-line `rate_limits` metadata |
 
-Codex uses its official CLI to access your account. The selected profile directory, `$CODEX_HOME`, or `~/.codex` determines the profile. The CLI owns its authentication lifecycle. When no CLI is installed, the extension can use an existing `auth.json` token with `https://chatgpt.com/backend-api/wham/usage`. That fallback endpoint and Claude's usage endpoint are undocumented and may change.
+### Codex
 
-Claude checks `.credentials.json` in the selected directory, `$CLAUDE_CONFIG_DIR`, or `~/.claude`. Credential files take precedence. For the default profile, **Connect Claude Code** reads the existing `Claude Code-credentials` Keychain item through macOS's native `security` command. macOS may request approval. The extension stores only the access token and expiry in Raycast's encrypted local storage; never the refresh token. Background refresh does not read the system Keychain or display access prompts. Reconnect if the saved access token expires.
+The official Codex CLI owns authentication and its lifecycle. The selected profile directory, `$CODEX_HOME`, or `~/.codex` determines the profile. The extension starts the CLI app-server to read quota windows; it does not read authentication files or call private usage endpoints. Install and sign in to the official CLI before using this adapter.
 
-Explicit custom Claude profiles do not fall back to the default account's Keychain item. Claude needs a normal subscription login with the `user:profile` scope; `claude setup-token` is not a replacement. The extension does not renew Claude credentials, modify Keychain items, or grant itself access. No AppleScript or JavaScript automation bridge is used.
+### Claude Code
 
-Claude HTTP requests time out after 12 seconds, reject redirects, and cap JSON responses at 1 MiB. Command openings share a 60-second snapshot cache; **⌘R** explicitly requests a new reading. The dashboard updates age/reset labels while open but does not poll the network continuously. Raycast controls menu-bar scheduling and may delay background refresh.
+Choose **Connect Claude Code** once to add a local status-line integration to your Claude settings. The selected directory, `$CLAUDE_CONFIG_DIR`, or `~/.claude` determines the profile. Your existing status-line command is preserved. The integration runs locally when Claude Code updates its status line and saves only the reported quota windows and observation time for Raycast to read.
 
-The adapters expose only quota windows reported by the provider. Credits, spend, local transcript token estimates, and inferred allowances are outside this extension's scope. If a provider rejects access, its last reading is labeled as such and excluded from the menu-bar total.
+After connecting, use Claude Code and refresh Session Limits. Until Claude reports its first quota data, the dashboard shows **Waiting for Claude Code**. Readings update while Claude Code is active; pressing refresh in Raycast reads the latest saved observation and does not make Claude generate a new one. A quiet or closed Claude session can therefore leave an old reading.
 
-Protocol references: [Codex app-server](https://developers.openai.com/codex/app-server), [CodexBar Codex](https://github.com/steipete/CodexBar/blob/main/docs/codex.md), [CodexBar Claude](https://github.com/steipete/CodexBar/blob/main/docs/claude.md), [Codex storage](https://github.com/openai/codex/blob/main/codex-rs/login/src/auth/storage.rs), and [Raycast encrypted storage](https://developers.raycast.com/information/security).
+Choose **Disconnect Claude Code** to remove the integration and restore the prior status-line setting when the installed setting still belongs to Session Limits. It does not overwrite unrelated settings changes you make later. A project-level status-line override can prevent the integration from receiving updates.
+
+The extension does not read Claude credential files, access Keychain credentials, store tokens, or make requests to Anthropic usage endpoints. Claude Code manages its own authentication. See the [official status-line documentation](https://code.claude.com/docs/en/statusline) for the metadata and update behavior.
+
+### Freshness and scope
+
+Command openings share a 60-second snapshot cache; **⌘R** requests a new reading from the adapter. The dashboard updates age/reset labels while open but does not poll the network continuously. Raycast controls menu-bar scheduling and may delay background refresh.
+
+The adapters expose only quota windows reported by the provider. Credits, spend, local transcript token estimates, and inferred allowances are outside this extension's scope. Failed refreshes and stale readings are labeled and excluded from the menu-bar total. A passed reset time does not establish that usage is zero.
+
+Protocol references: [Codex app-server](https://developers.openai.com/codex/app-server) and [Claude Code status lines](https://code.claude.com/docs/en/statusline).

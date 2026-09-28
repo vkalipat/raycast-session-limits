@@ -62,6 +62,7 @@ export default function SessionLimits() {
                   actions={
                     <ProviderActions
                       provider={provider}
+                      windowId={window.id}
                       refresh={refresh}
                       connect={connect}
                       disconnect={disconnect}
@@ -74,9 +75,11 @@ export default function SessionLimits() {
                 title={
                   provider.needsConnection
                     ? `Connect ${provider.name}`
-                    : provider.error
-                      ? "Usage Unavailable"
-                      : "No Quota Windows"
+                    : provider.status === "waiting"
+                      ? "Waiting for Claude Code"
+                      : provider.error
+                        ? "Usage Unavailable"
+                        : "No Quota Windows"
                 }
                 subtitle={provider.error ?? "The provider returned no limits."}
                 icon={provider.needsConnection ? Icon.Link : Icon.QuestionMarkCircle}

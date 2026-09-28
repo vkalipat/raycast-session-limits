@@ -2,9 +2,17 @@
 
 # Session Limits
 
-Your coding assistant quotas, in Raycast. See what's left, when it resets, and how fresh the reading is.
+A lightweight **Raycast extension for Codex and Claude Code usage limits**. See remaining session and weekly quotas, reset times, and fresh readings in a native dashboard or optional menu bar.
 
-**[Download for macOS](https://github.com/vkalipat/raycast-session-limits/releases/latest/download/session-limits.zip)** · [Changelog](CHANGELOG.md)
+Provider-neutral adapters also support [custom quota snapshots](docs/providers.md) from other coding assistants.
+
+**[Download for macOS](https://github.com/vkalipat/raycast-session-limits/releases/latest/download/session-limits.zip)** · [Changelog](CHANGELOG.md) · [Report a bug](https://github.com/vkalipat/raycast-session-limits/issues/new/choose)
+
+Raycast Store publication is pending. Use the GitHub download below in the meantime.
+
+![Session Limits quota gauge in Raycast](media/session-limits-detail.png)
+
+_Preview uses sample quota values._
 
 ## Install
 
@@ -14,17 +22,17 @@ Requires **macOS and Raycast 2.5.3+**.
 2. Run **Import Extension** in Raycast. Select the **Session Limits** folder.
 3. Open **Show Session Limits**.
 
-No terminal, npm, scripts, or API keys to configure. Raycast may ask you to sign in before importing. To update, import the latest ZIP the same way.
+No terminal commands, npm, or API keys to configure. Raycast may ask you to sign in before importing. To update, import the latest ZIP the same way.
 
 ## Connect
 
-| Provider            | Setup                                                              |
-| ------------------- | ------------------------------------------------------------------ |
-| **Codex**           | Your existing Codex sign-in is detected automatically.             |
-| **Claude Code**     | Choose **Connect Claude Code**. Approve macOS access if asked.     |
-| **Other providers** | Select a [local quota snapshot](docs/providers.md) in preferences. |
+| Provider            | Setup                                                                    |
+| ------------------- | ------------------------------------------------------------------------ |
+| **Codex**           | Your existing Codex sign-in is detected automatically.                   |
+| **Claude Code**     | Choose **Connect Claude Code**, then use Claude Code to populate limits. |
+| **Other providers** | Select a [local quota snapshot](docs/providers.md) in preferences.       |
 
-Sign in to the provider's official app or CLI first. If Claude's connection expires, reopen Claude Code and reconnect here. Automatic refresh never requests access to Claude's system Keychain.
+Sign in to the provider’s official app or CLI first. Claude Code requires version **2.1.251+** with Pro or Max. Connecting adds a local status-line integration that preserves your existing status line and saves quota readings while Claude Code is active. Use **Disconnect Claude Code** to remove it.
 
 ## Use
 
@@ -36,7 +44,7 @@ The menu-bar percentage is the lowest remaining quota across current readings. F
 
 ## Privacy
 
-No server, telemetry, or browser scraping. Claude's access token is kept in Raycast's encrypted local storage; its refresh token is never stored. Only quota snapshots go into the display cache.
+No server, telemetry, or browser scraping. The extension never reads or stores provider credentials. Codex uses its official CLI; Claude Code supplies quota metadata through its documented status-line interface. Only quota snapshots go into the display cache. Connecting Claude updates its local status-line setting; disconnecting restores the prior setting when the integration is still installed.
 
 These are subscription limits, not API billing or context-window usage. [Compatibility and credential details →](docs/providers.md#compatibility)
 
@@ -55,10 +63,12 @@ npm run dev
 
 One runtime dependency: the Raycast API. Adapters return a shared [`ProviderSnapshot`](src/core/types.ts); register new adapters in [`src/core/load.ts`](src/core/load.ts). The UI remains provider-neutral.
 
-Distributed through GitHub, not the Raycast Store. Store validation is available through `npm run lint:store`.
+See [Contributing](CONTRIBUTING.md) to propose an adapter or improve compatibility. Store validation is available through `npm run lint:store`.
 
 ## Credits
 
 Compatibility research: [CodexBar](https://github.com/steipete/CodexBar), [claude-codex-usage](https://github.com/jun1485/claude-codex-usage), and [OpenAI Codex](https://github.com/openai/codex). Independently implemented; no upstream code bundled. Unaffiliated with the providers or Raycast.
+
+If Session Limits is useful, [star the project](https://github.com/vkalipat/raycast-session-limits) to help others find it.
 
 [MIT license](LICENSE)

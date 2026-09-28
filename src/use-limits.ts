@@ -8,47 +8,45 @@ import {
   Toast,
 } from "@raycast/api";
 import { createHash, randomUUID } from "node:crypto";
+import { join } from "node:path";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { loadProviders } from "./core/load";
-import type { CredentialStore, ProviderState, Settings } from "./core/types";
-import { CLAUDE_CONNECTION_KEY } from "./providers/claude";
-import { ConnectionRequired } from "./core/errors";
+import type { ProviderState, Settings } from "./core/types";
+import { connectClaudeBridge, disconnectClaudeBridge } from "./providers/claude-bridge";
 
-const cache = new Cache({ namespace: "session-limits-v2" });
+const cache = new Cache({ namespace: "session-limits-v3" });
 const settings = getPreferenceValues<Settings>();
 const cacheKey = createHash("sha256")
   .update(JSON.stringify([settings, process.env.CODEX_HOME, process.env.CLAUDE_CONFIG_DIR]))
   .digest("hex");
 const background = environment.launchType === LaunchType.Background;
-const DISCONNECTED_KEY = "claude-disconnected";
-const CONNECTION_EPOCH_KEY = "claude-connection-epoch";
+const bridgeDirectory = join(environment.supportPath, "claude-bridge");
+const REVISION_KEY = "claude-bridge-revision";
 
-async function connectionEpoch(): Promise<string> {
-  return (await LocalStorage.getItem<string>(CONNECTION_EPOCH_KEY)) ?? "initial";
+async function connectionRevision(): Promise<string> {
+  return (await LocalStorage.getItem<string>(REVISION_KEY)) ?? "initial";
 }
 
-// Raycast LocalStorage is encrypted and private to this extension. Snapshot Cache never receives tokens.
-function credentialStore(epoch: string): CredentialStore {
-  const scopedKey = (key: string) => `${key}:${epoch}`;
-  return {
-    get: (key) => LocalStorage.getItem<string>(scopedKey(key)),
-    set: async (key, value) => {
-      if ((await connectionEpoch()) !== epoch) throw new ConnectionRequired();
-      await LocalStorage.setItem(scopedKey(key), value);
-      if ((await connectionEpoch()) !== epoch) {
-        await LocalStorage.removeItem(scopedKey(key));
-        throw new ConnectionRequired();
-      }
-    },
-    remove: (key) => LocalStorage.removeItem(scopedKey(key)),
-  };
+let cleanup: Promise<void> | undefined;
+function removeLegacyConnection(): Promise<void> {
+  // Delete only this extension's obsolete connection entries. Never reuse or log their contents.
+  return (cleanup ??= (async () => {
+    const items = await LocalStorage.allItems();
+    const keys = Object.keys(items).filter(
+      (key) =>
+        key === "claude-access-v1" ||
+        key.startsWith("claude-access-v1:") ||
+        key === "claude-disconnected" ||
+        key === "claude-connection-epoch",
+    );
+    await Promise.all(keys.map((key) => LocalStorage.removeItem(key)));
+  })());
 }
 
 interface CachedResult {
   fetchedAt: number;
   providers: ProviderState[];
 }
-
 function readCache(): CachedResult | undefined {
   try {
     const value = JSON.parse(cache.get(cacheKey) ?? "null") as CachedResult | null;
@@ -63,42 +61,28 @@ export function useLimits() {
   const [isLoading, setLoading] = useState(true);
   const mounted = useRef(true);
   const inFlight = useRef<Promise<void> | null>(null);
+  const actionInFlight = useRef(false);
 
-  const fetchLimits = useCallback((force: boolean, connectId?: string): Promise<void> => {
+  const fetchLimits = useCallback((force: boolean): Promise<void> => {
     if (inFlight.current) return inFlight.current;
     const task = (async () => {
-      const cached = readCache();
-      if (!force && cached && Date.now() - cached.fetchedAt < 60_000) {
-        if (mounted.current) {
-          setProviders(cached.providers);
-          setLoading(false);
-        }
-        return;
-      }
       if (mounted.current) setLoading(true);
       try {
-        const epoch = await connectionEpoch();
+        await removeLegacyConnection();
+        const cached = readCache();
+        if (!force && cached && Date.now() - cached.fetchedAt < 60_000) {
+          if (mounted.current) setProviders(cached.providers);
+          return;
+        }
+        const revision = await connectionRevision();
         const next = await loadProviders(
-          {
-            ...settings,
-            credentialStore: credentialStore(epoch),
-            claudeDisconnected: (await LocalStorage.getItem<string>(DISCONNECTED_KEY)) === "true",
-            keychainInteractive: connectId === "claude" && !background,
-          },
+          { ...settings, claudeBridgeDirectory: bridgeDirectory },
           cached?.providers,
         );
-        // An older view/menu refresh cannot restore data after a newer connect/disconnect action.
-        if ((await connectionEpoch()) !== epoch) return;
+        // Do not let an older command restore a reading after connection settings change.
+        if ((await connectionRevision()) !== revision) return;
         cache.set(cacheKey, JSON.stringify({ fetchedAt: Date.now(), providers: next }));
         if (mounted.current) setProviders(next);
-        if (connectId && !background) {
-          const connected = next.find((provider) => provider.id === connectId)?.status === "ready";
-          await showToast({
-            style: connected ? Toast.Style.Success : Toast.Style.Failure,
-            title: connected ? "Claude Code connected" : "Connection not completed",
-            message: connected ? undefined : next.find((provider) => provider.id === connectId)?.error,
-          });
-        }
       } catch {
         if (!background)
           await showToast({
@@ -136,49 +120,48 @@ export function useLimits() {
   }, []);
 
   const refresh = useCallback(() => fetchLimits(true), [fetchLimits]);
-  const connect = useCallback(
-    async (id: string) => {
-      if (id !== "claude" || background) return;
-      if (inFlight.current) await inFlight.current;
-      const previousEpoch = await connectionEpoch();
-      await LocalStorage.setItem(CONNECTION_EPOCH_KEY, randomUUID());
-      await LocalStorage.removeItem(DISCONNECTED_KEY);
-      await credentialStore(previousEpoch).remove(CLAUDE_CONNECTION_KEY);
-      await fetchLimits(true, id);
+  const changeConnection = useCallback(
+    async (id: string, connecting: boolean) => {
+      if (id !== "claude" || background || actionInFlight.current) return;
+      actionInFlight.current = true;
+      if (mounted.current) setLoading(true);
+      try {
+        if (inFlight.current) await inFlight.current;
+        await removeLegacyConnection();
+        await LocalStorage.setItem(REVISION_KEY, randomUUID());
+        if (connecting) {
+          await connectClaudeBridge({
+            claudeConfigDir: settings.claudeConfigDir,
+            bridgeDirectory,
+            assetPath: join(environment.assetsPath, "claude-statusline.cjs"),
+            nodePath: process.execPath,
+          });
+        } else {
+          await disconnectClaudeBridge({ claudeConfigDir: settings.claudeConfigDir, bridgeDirectory });
+        }
+        // Invalidate refreshes that began while the settings update was in progress.
+        await LocalStorage.setItem(REVISION_KEY, randomUUID());
+        cache.remove(cacheKey);
+        await fetchLimits(true);
+        await showToast({
+          style: Toast.Style.Success,
+          title: connecting ? "Claude Code connected" : "Claude Code disconnected",
+          message: connecting ? "Use Claude Code, then refresh to see its latest limits." : undefined,
+        });
+      } catch (error) {
+        await showToast({
+          style: Toast.Style.Failure,
+          title: connecting ? "Could not connect Claude Code" : "Could not disconnect Claude Code",
+          message: error instanceof Error ? error.message : "Please try again.",
+        });
+      } finally {
+        actionInFlight.current = false;
+        if (mounted.current) setLoading(false);
+      }
     },
     [fetchLimits],
   );
-  const disconnect = useCallback(
-    async (id: string) => {
-      if (id !== "claude") return;
-      const previousEpoch = await connectionEpoch();
-      await LocalStorage.setItem(CONNECTION_EPOCH_KEY, randomUUID());
-      await LocalStorage.setItem(DISCONNECTED_KEY, "true");
-      await credentialStore(previousEpoch).remove(CLAUDE_CONNECTION_KEY);
-      const cached = readCache();
-      cache.set(
-        cacheKey,
-        JSON.stringify({
-          fetchedAt: Date.now(),
-          providers:
-            cached?.providers.map((provider) =>
-              provider.id !== id
-                ? provider
-                : {
-                    id,
-                    name: provider.name,
-                    status: "setup",
-                    needsConnection: true,
-                    error: "Connect your existing Claude Code account to see its limits.",
-                  },
-            ) ?? [],
-        }),
-      );
-      if (inFlight.current) await inFlight.current;
-      await fetchLimits(true);
-    },
-    [fetchLimits],
-  );
-
+  const connect = useCallback((id: string) => changeConnection(id, true), [changeConnection]);
+  const disconnect = useCallback((id: string) => changeConnection(id, false), [changeConnection]);
   return { providers, isLoading, refresh, connect, disconnect };
 }

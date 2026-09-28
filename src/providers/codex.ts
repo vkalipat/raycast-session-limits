@@ -1,8 +1,6 @@
-import { join } from "node:path";
 import type { ProviderOptions, ProviderSnapshot, UsageWindow } from "../core/types";
-import { codexToken, configHome, readCredentials } from "./credentials";
+import { configHome } from "./credentials";
 import { findCodexExecutable, readCodexRateLimits } from "./codex-rpc";
-import { fetchUsage } from "./http";
 import { isoDate, percent, record, text } from "./parsing";
 
 export function parseCodexUsage(data: unknown): UsageWindow[] {
@@ -86,42 +84,23 @@ export function parseCodexRpcUsage(data: unknown): UsageWindow[] {
 export async function fetchCodex(options: ProviderOptions): Promise<ProviderSnapshot> {
   const home = configHome(options.codexHome, process.env.CODEX_HOME, ".codex");
   const executable = await findCodexExecutable();
-  if (executable) {
-    const data = record(await readCodexRateLimits(executable, home));
-    const windows = parseCodexRpcUsage(data);
-    if (!windows.length) throw new Error("Codex returned no supported subscription limits for this account.");
-    const buckets = Object.values(record(data.rateLimitsByLimitId));
-    return {
-      id: "codex",
-      name: "Codex",
-      plan:
-        text(record(data.rateLimits).planType) ||
-        buckets.map((bucket) => text(record(bucket).planType)).find(Boolean),
-      windows,
-      updatedAt: new Date().toISOString(),
-      source: "Codex app server",
-      dashboardUrl: "https://chatgpt.com/codex/settings/usage",
-    };
-  }
-  const credentials = await readCredentials(join(home, "auth.json"));
-  const source = "Codex OAuth file";
-  const auth = credentials && codexToken(credentials);
-  if (!auth)
+  if (!executable)
     throw new Error(
       "Install Codex and sign in with your ChatGPT account, then refresh. API keys do not provide subscription limits.",
     );
-  const headers: Record<string, string> = { Authorization: `Bearer ${auth.token}` };
-  if (auth.account) headers["ChatGPT-Account-Id"] = auth.account;
-  const data = await fetchUsage("https://chatgpt.com/backend-api/wham/usage", headers, "Codex");
-  const windows = parseCodexUsage(data);
+  const data = record(await readCodexRateLimits(executable, home));
+  const windows = parseCodexRpcUsage(data);
   if (!windows.length) throw new Error("Codex returned no supported subscription limits for this account.");
+  const buckets = Object.values(record(data.rateLimitsByLimitId));
   return {
     id: "codex",
     name: "Codex",
-    plan: text(record(data).plan_type),
+    plan:
+      text(record(data.rateLimits).planType) ||
+      buckets.map((bucket) => text(record(bucket).planType)).find(Boolean),
     windows,
     updatedAt: new Date().toISOString(),
-    source,
+    source: "Codex app server",
     dashboardUrl: "https://chatgpt.com/codex/settings/usage",
   };
 }
