@@ -116,15 +116,6 @@
         width: 32px;
         height: 32px;
       }
-      .version {
-        border: 1px solid var(--line);
-        padding: 2px 7px;
-        border-radius: 7px;
-        font-size: 10px;
-        font-weight: 650;
-        letter-spacing: 0;
-        margin-left: 3px;
-      }
       nav {
         display: flex;
         align-items: center;
@@ -207,17 +198,6 @@
       }
       .button.secondary {
         background: #efdbc3;
-      }
-      .pill {
-        font-size: 10px;
-        padding: 2px 6px;
-        border-radius: 10px;
-        background: #dcc2a3;
-      }
-      .tiny {
-        font-size: 12px;
-        color: var(--muted);
-        margin: 18px 0 0;
       }
       .stage {
         position: relative;
@@ -375,14 +355,6 @@
       section {
         padding: 70px 0 0;
       }
-      .eyebrow {
-        margin: 0 0 12px;
-        font-size: 11px;
-        text-transform: uppercase;
-        letter-spacing: 0.13em;
-        font-weight: 700;
-        color: #8e5540;
-      }
       h2 {
         font-size: clamp(34px, 4.8vw, 52px);
         line-height: 1.1;
@@ -403,9 +375,6 @@
         text-align: center;
         max-width: 650px;
         margin: 0 auto 37px;
-      }
-      .section-head > p:last-child {
-        color: var(--muted);
       }
       .steps {
         display: grid;
@@ -521,14 +490,8 @@
         .brand {
           font-size: 15px;
         }
-        .version {
-          display: none;
-        }
         nav {
           gap: 16px;
-        }
-        header nav .changelog {
-          display: none;
         }
         .nav-download {
           padding: 9px 13px;
@@ -605,33 +568,25 @@
     <div class="wrap">
       <header>
         <a class="brand" href="./"
-          ><img src="assets/icon.png" width="32" height="32" alt="" />Session Limits<span class="version"
-            >v1.2</span
-          ></a
+          ><img src="assets/icon.png" width="32" height="32" alt="" />Session Limits</a
         >
         <nav aria-label="Main navigation">
-          <a href="#faq">FAQ</a
-          ><a class="changelog" href="https://github.com/vkalipat/raycast-session-limits/releases"
-            >Changelog</a
-          ><a class="nav-download" href="#install">Download ↓</a>
+          <a href="#faq">FAQ</a><a class="nav-download" href="#install">Install ↓</a>
         </nav>
       </header>
       <main id="main">
         <div class="hero">
           <h1>Your limits.<br />Right in <span class="highlight">Raycast.</span></h1>
-          <p class="intro">
-            A little clarity for your next big idea.<br />Codex and Claude Code quotas, at a glance.
-          </p>
+          <p class="intro">Codex and Claude Code quotas, at a glance.</p>
           <div class="actions">
             <a
               class="button primary"
               href="https://github.com/vkalipat/raycast-session-limits/releases/latest/download/session-limits.zip"
               ><span aria-hidden="true">↓</span> Download for Mac</a
             ><a class="button secondary" href="https://github.com/vkalipat/raycast-session-limits"
-              >Star on GitHub <span class="pill">Free · MIT</span></a
+              >Star on GitHub</a
             >
           </div>
-          <p class="tiny">For Raycast on macOS.</p>
           <div class="stage">
             <div class="demo" aria-label="Interactive quota demo">
               <div class="demo-top">
@@ -680,23 +635,18 @@
                 </svg>
               </div>
               <div class="demo-footer">
-                <span>Resets in <strong id="reset">2h 14m</strong></span
-                ><span><strong>Demo</strong></span>
+                <span>Resets in <strong id="reset">2h 14m</strong></span>
               </div>
             </div>
             <p
               id="demo-announcement"
-              class="tiny"
               role="status"
               style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)"
             ></p>
           </div>
         </div>
         <section id="install">
-          <div class="section-head">
-            <p class="eyebrow">Up and running</p>
-            <h2>Ready in three steps.</h2>
-          </div>
+          <h2 class="section-head">Install</h2>
           <ol class="steps">
             <li>
               <h3>Download &amp; unzip</h3>
@@ -713,10 +663,7 @@
           </ol>
         </section>
         <section id="faq" class="faq">
-          <div class="section-head">
-            <p class="eyebrow">Good questions</p>
-            <h2>Good to know.</h2>
-          </div>
+          <h2 class="section-head">FAQ</h2>
           <details>
             <summary>How do I connect my providers?</summary>
             <p>
@@ -747,7 +694,7 @@
         </section>
       </main>
       <footer>
-        <span>Session Limits · Made for your Mac.</span>
+        <span>Session Limits</span>
         <nav aria-label="Project links">
           <a href="https://github.com/vkalipat/raycast-session-limits">GitHub</a
           ><a href="https://github.com/vkalipat/raycast-session-limits/releases">Releases</a
