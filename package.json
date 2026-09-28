@@ -95,7 +95,7 @@
     "lint": "eslint src",
     "lint:fix": "eslint src --fix",
     "lint:store": "ray lint",
-    "bundle": "ray bundle -o session-limits.rayext",
+    "bundle": "ray bundle -o session-limits.rayext && zip -dq session-limits.rayext '*.js.map'",
     "typecheck": "tsc --noEmit",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
