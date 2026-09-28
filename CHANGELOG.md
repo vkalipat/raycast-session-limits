@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.2] - 2026-09-28
+
+- Show Codex's main subscription limits without separate reserve or model pools.
+- Show 5-hour and weekly windows only when the account reports them.
+- Refresh cached readings when upgrading so removed reserve rows disappear.
+
 ## [1.2.1] - 2026-09-28
 
 - Reject changed Claude settings before connecting or disconnecting.
