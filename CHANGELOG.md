@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1] - 2026-09-28
+
+- Reject changed Claude settings before connecting or disconnecting.
+- Recover abandoned connection locks after an interrupted setup.
+- Complete a fresh quota reading after connection changes, including overlapping refreshes.
+- Use generated Raycast preference types and the current ESLint configuration helper.
+
 ## [1.2.0] - 2026-09-28
 
 - Claude Code connects through its official status line; no Claude tokens or Keychain access.

@@ -12,7 +12,7 @@ Provider-neutral adapters also support [custom quota snapshots](docs/providers.m
 
 ![Session Limits quota gauge in Raycast](media/session-limits-detail.png)
 
-_Preview uses sample quota values._
+_Quota detail preview._
 
 ## Install
 
