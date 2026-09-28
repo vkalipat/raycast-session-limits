@@ -3,25 +3,22 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="theme-color" content="#faf8f5" />
+    <meta name="theme-color" content="#fff0df" />
     <title>Session Limits — Codex &amp; Claude Code quotas in Raycast</title>
     <meta
       name="description"
-      content="See your Codex and Claude Code usage limits, remaining quota, and reset times in Raycast. Free, open source, and local to your Mac."
+      content="Your Codex and Claude Code limits, right in Raycast. A free, open-source Mac extension with visual quota gauges, reset times, and a menu bar indicator."
     />
     <link rel="canonical" href="https://vkalipat.github.io/raycast-session-limits/" />
     <link rel="icon" href="assets/icon.png" type="image/png" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Session Limits — Know what’s left." />
+    <meta property="og:title" content="Session Limits — Your limits. Right in Raycast." />
     <meta
       property="og:description"
-      content="Codex and Claude Code quotas, reset times, and a visual usage gauge. Right in Raycast."
+      content="Codex and Claude Code quotas at a glance. Free, open source, and made for your Mac."
     />
     <meta property="og:url" content="https://vkalipat.github.io/raycast-session-limits/" />
-    <meta
-      property="og:image"
-      content="https://vkalipat.github.io/raycast-session-limits/media/session-limits-detail.png"
-    />
+    <meta property="og:image" content="https://vkalipat.github.io/raycast-session-limits/assets/icon.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <script type="application/ld+json">
       {
@@ -42,31 +39,45 @@
     <style>
       :root {
         color-scheme: light;
-        --paper: #faf8f5;
-        --ink: #242422;
-        --muted: #62615c;
-        --accent: #b82e21;
-        --line: #dfddd7;
+        --cream: #fff0df;
+        --ink: #211e1b;
+        --muted: #706358;
+        --coral: #fa7862;
+        --line: #dfcdb9;
       }
       * {
         box-sizing: border-box;
       }
+      html {
+        scroll-behavior: smooth;
+      }
       body {
         margin: 0;
-        background: var(--paper);
+        background: var(--cream);
         color: var(--ink);
         font:
-          17px/1.6 -apple-system,
+          17px/1.55 -apple-system,
           BlinkMacSystemFont,
           "Segoe UI",
           sans-serif;
+        -webkit-font-smoothing: antialiased;
+      }
+      button,
+      a {
+        -webkit-tap-highlight-color: transparent;
+      }
+      button {
+        font: inherit;
+        cursor: pointer;
       }
       a {
-        color: var(--accent);
-        text-underline-offset: 0.2em;
+        color: inherit;
+        text-underline-offset: 4px;
       }
-      a:focus-visible {
-        outline: 3px solid var(--accent);
+      a:focus-visible,
+      button:focus-visible,
+      summary:focus-visible {
+        outline: 3px solid #9b3526;
         outline-offset: 5px;
       }
       .skip {
@@ -75,212 +86,516 @@
         left: 20px;
         padding: 12px;
         background: white;
-        z-index: 2;
+        z-index: 10;
       }
       .skip:focus {
         top: 12px;
       }
       .wrap {
-        width: min(1080px, calc(100% - 48px));
+        width: min(1040px, calc(100% - 48px));
         margin: auto;
       }
       header {
-        padding: 28px 0;
         display: flex;
-        justify-content: space-between;
         align-items: center;
+        justify-content: space-between;
+        padding: 27px 0;
         gap: 20px;
       }
       .brand {
         display: flex;
         align-items: center;
-        gap: 11px;
-        font-weight: 650;
+        gap: 9px;
         text-decoration: none;
-        color: var(--ink);
+        font-size: 17px;
+        font-weight: 750;
+        letter-spacing: -0.04em;
+        white-space: nowrap;
       }
       .brand img {
-        width: 36px;
-        height: 36px;
+        width: 32px;
+        height: 32px;
       }
-      header > a {
-        font-size: 14px;
-        color: var(--muted);
+      .version {
+        border: 1px solid var(--line);
+        padding: 2px 7px;
+        border-radius: 7px;
+        font-size: 10px;
+        font-weight: 650;
+        letter-spacing: 0;
+        margin-left: 3px;
+      }
+      nav {
+        display: flex;
+        align-items: center;
+        gap: 27px;
+        font-size: 13px;
+        font-weight: 600;
+      }
+      nav a {
+        text-decoration: none;
+      }
+      .nav-download {
+        padding: 10px 18px;
+        border-radius: 24px;
+        background: #f3dfc8;
       }
       .hero {
-        padding: 78px 0 68px;
-        max-width: 850px;
-      }
-      .eyebrow {
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.13em;
-        text-transform: uppercase;
-        color: var(--accent);
-        margin: 0 0 18px;
+        text-align: center;
+        padding: 72px 0 0;
       }
       h1 {
-        font-size: clamp(48px, 7.2vw, 84px);
-        line-height: 1.04;
-        letter-spacing: -0.055em;
-        font-weight: 650;
-        margin: 0 0 26px;
+        font-size: clamp(49px, 7.3vw, 82px);
+        line-height: 1.05;
+        letter-spacing: -0.05em;
+        font-weight: 800;
+        margin: 0;
+      }
+      .highlight {
+        position: relative;
+        z-index: 0;
+        white-space: nowrap;
+      }
+      .highlight::after {
+        content: "";
+        position: absolute;
+        z-index: -1;
+        left: -2%;
+        right: -3%;
+        bottom: 4px;
+        height: 23%;
+        background: var(--coral);
+        transform: rotate(-2deg);
+        border-radius: 2px;
       }
       .intro {
-        max-width: 630px;
         color: var(--muted);
-        font-size: 22px;
-        line-height: 1.5;
-        margin: 0 0 30px;
+        max-width: 510px;
+        margin: 25px auto 26px;
+        font-size: 18px;
+        line-height: 1.6;
       }
       .actions {
         display: flex;
-        gap: 14px;
-        align-items: center;
+        justify-content: center;
+        gap: 12px;
         flex-wrap: wrap;
       }
       .button {
-        display: inline-block;
-        padding: 13px 21px;
-        border: 1px solid var(--line);
-        border-radius: 9px;
-        color: var(--ink);
-        font-size: 15px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 9px;
+        border-radius: 30px;
+        padding: 14px 24px;
+        font-size: 14px;
         font-weight: 650;
         text-decoration: none;
-      }
-      .button.primary {
-        color: white;
-        background: var(--accent);
-        border-color: var(--accent);
+        transition:
+          transform 0.15s,
+          background 0.15s;
       }
       .button:hover {
-        border-color: var(--ink);
+        transform: translateY(-2px);
       }
-      .button.primary:hover {
-        background: #94251b;
-        border-color: #94251b;
+      .button.primary {
+        color: #fff6eb;
+        background: var(--ink);
+        box-shadow:
+          0 4px 0 #c8b39c,
+          0 7px 12px #4c301316;
       }
-      .note {
+      .button.secondary {
+        background: #efdbc3;
+      }
+      .pill {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        background: #dcc2a3;
+      }
+      .tiny {
+        font-size: 12px;
         color: var(--muted);
+        margin: 18px 0 0;
+      }
+      .stage {
+        position: relative;
+        margin: 58px auto 0;
+        padding: 54px 40px 31px;
+        max-width: 940px;
+        border-radius: 32px;
+        background:
+          radial-gradient(ellipse at 15% 15%, #ffbaa0 0, transparent 55%),
+          radial-gradient(ellipse at 95% 95%, #a04b45 0, transparent 60%), #df7863;
+        overflow: hidden;
+      }
+      .stage::before {
+        content: "";
+        position: absolute;
+        width: 700px;
+        height: 700px;
+        border: 1px solid #ffffff26;
+        border-radius: 50%;
+        left: -220px;
+        top: -360px;
+        pointer-events: none;
+        box-shadow:
+          0 0 0 55px #ffffff09,
+          0 0 0 110px #ffffff08;
+      }
+      .demo {
+        position: relative;
+        max-width: 510px;
+        margin: auto;
+        border-radius: 19px;
+        background: #242222;
+        color: #faf6f1;
+        box-shadow:
+          0 25px 60px #54271955,
+          0 0 0 1px #ffffff26;
+        overflow: hidden;
+        text-align: left;
+      }
+      .demo-top {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 18px 22px;
+        border-bottom: 1px solid #ffffff12;
+        font-size: 12px;
+        color: #c8c0b9;
+      }
+      .traffic {
+        display: flex;
+        gap: 5px;
+      }
+      .traffic i {
+        width: 7px;
+        height: 7px;
+        border-radius: 50%;
+        background: #706760;
+      }
+      .demo-content {
+        padding: 25px 28px 20px;
+        text-align: center;
+      }
+      .provider-switch {
+        position: relative;
+        isolation: isolate;
+        display: inline-flex;
+        gap: 5px;
+        border-radius: 12px;
+        background: #171717;
+        padding: 4px;
+      }
+      .provider-switch button {
+        position: relative;
+        z-index: 1;
+        width: 120px;
+        border: 0;
+        background: transparent;
+        color: #bcb4ae;
+        padding: 9px 18px;
         font-size: 13px;
-        margin: 15px 0 0;
+        font-weight: 600;
+        border-radius: 9px;
       }
-      .preview {
-        margin: 0;
+      .provider-switch button[aria-pressed="true"] {
+        color: #fff6ec;
       }
-      .preview img {
+      .window-switch {
+        display: flex;
+        justify-content: center;
+        gap: 18px;
+        margin: 17px 0 0;
+      }
+      .window-switch button {
+        padding: 5px 0;
+        background: none;
+        color: #b9b0a8;
+        border: 0;
+        border-bottom: 2px solid transparent;
+        font-size: 12px;
+      }
+      .window-switch button[aria-pressed="true"] {
+        color: #ffb39c;
+        border-bottom-color: #ffb39c;
+      }
+      .gauge {
         display: block;
         width: 100%;
+        max-width: 330px;
         height: auto;
-        border: 1px solid var(--line);
-        border-radius: 15px;
-        background: #eeeae5;
+        margin: 0 auto;
+        overflow: visible;
       }
-      figcaption {
-        color: var(--muted);
-        font-size: 13px;
-        margin: 12px 0;
+      .gauge-track {
+        fill: none;
+        stroke: #46403b;
+        stroke-width: 17;
+        stroke-linecap: round;
+      }
+      .gauge-value {
+        fill: none;
+        stroke: #ff9f82;
+        stroke-width: 17;
+        stroke-linecap: round;
+        transition: stroke-dashoffset 0.55s ease;
+      }
+      .needle {
+        stroke: #ffe6d0;
+        stroke-width: 3;
+        stroke-linecap: round;
+        transform-origin: 180px 173px;
+        transition: transform 0.55s ease;
+      }
+      .gauge-number {
+        fill: #fff7ee;
+        font-size: 47px;
+        font-weight: 750;
+        letter-spacing: -2px;
+      }
+      .gauge-label {
+        fill: #bfb5ab;
+        font-size: 11px;
+      }
+      .demo-footer {
+        display: flex;
+        justify-content: space-between;
+        padding: 13px 20px;
+        font-size: 11px;
+        color: #bab1a9;
+        border-top: 1px solid #ffffff12;
+      }
+      .demo-footer strong {
+        font-weight: 500;
+        color: #f3e5d8;
       }
       section {
-        padding: 66px 0;
-        border-bottom: 1px solid var(--line);
+        padding: 70px 0 0;
+      }
+      .eyebrow {
+        margin: 0 0 12px;
+        font-size: 11px;
+        text-transform: uppercase;
+        letter-spacing: 0.13em;
+        font-weight: 700;
+        color: #8e5540;
       }
       h2 {
-        font-size: 32px;
-        line-height: 1.2;
-        letter-spacing: -0.025em;
-        margin: 0 0 28px;
+        font-size: clamp(34px, 4.8vw, 52px);
+        line-height: 1.1;
+        letter-spacing: -0.055em;
+        font-weight: 750;
+        margin: 0 0 22px;
       }
       h3 {
-        font-size: 19px;
-        line-height: 1.35;
-        margin: 0 0 10px;
+        font-size: 21px;
+        letter-spacing: -0.03em;
+        line-height: 1.2;
+        margin: 0 0 11px;
       }
       p {
         margin: 0 0 16px;
       }
-      .grid {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: 36px;
+      .section-head {
+        text-align: center;
+        max-width: 650px;
+        margin: 0 auto 37px;
       }
-      .grid p,
-      .connect p {
+      .section-head > p:last-child {
         color: var(--muted);
-        font-size: 16px;
       }
       .steps {
-        padding: 0;
-        margin: 0;
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 35px;
         list-style: none;
-        counter-reset: steps;
+        padding: 0;
+        margin: 36px 0 0;
+        counter-reset: step;
       }
       .steps li {
-        counter-increment: steps;
+        counter-increment: step;
       }
       .steps li::before {
-        content: "0" counter(steps);
-        display: block;
-        color: var(--accent);
-        font:
-          600 13px/1.5 ui-monospace,
-          monospace;
-        margin-bottom: 20px;
+        content: counter(step);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: #eac7a7;
+        font-size: 13px;
+        font-weight: 750;
+        margin-bottom: 18px;
       }
-      .connect {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 64px;
-        align-items: start;
+      .steps h3 {
+        font-size: 18px;
       }
-      .connect article + article {
-        margin-top: 26px;
+      .steps p {
+        font-size: 15px;
+        color: var(--muted);
       }
-      .privacy {
-        padding: 26px;
-        border: 1px solid var(--line);
-        border-radius: 12px;
+      .faq {
+        max-width: 760px;
+        margin: auto;
+      }
+      details {
+        border-bottom: 1px solid var(--line);
+        padding: 22px 0;
+      }
+      summary {
+        cursor: pointer;
+        font-size: 17px;
+        font-weight: 650;
+      }
+      details p {
+        color: var(--muted);
+        font-size: 15px;
+        margin: 16px 0 0;
       }
       footer {
-        padding: 30px 0 42px;
         display: flex;
         justify-content: space-between;
-        gap: 24px;
+        gap: 20px;
+        border-top: 1px solid var(--line);
+        padding: 25px 0 32px;
+        margin-top: 65px;
         color: var(--muted);
-        font-size: 13px;
+        font-size: 12px;
       }
       footer nav {
-        display: flex;
-        flex-wrap: wrap;
+        font-size: 12px;
         gap: 20px;
+        font-weight: 400;
       }
-      footer a {
-        color: var(--muted);
+      .provider-switch::before {
+        content: "";
+        position: absolute;
+        inset: 4px auto 4px 4px;
+        width: 120px;
+        border-radius: 9px;
+        background: #45403c;
+        box-shadow: 0 1px 4px #0004;
+        transition: transform 0.4s cubic-bezier(0.22, 1, 0.36, 1);
+      }
+      .provider-switch[data-active="claude"]::before {
+        transform: translateX(125px);
+      }
+      @keyframes arrive {
+        from {
+          opacity: 0;
+          transform: translateY(12px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      @media (prefers-reduced-motion: no-preference) {
+        .hero > h1,
+        .hero > .intro,
+        .hero > .actions {
+          animation: arrive 0.65s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
+        .hero > .intro {
+          animation-delay: 0.06s;
+        }
+        .hero > .actions {
+          animation-delay: 0.12s;
+        }
+        .stage {
+          animation: arrive 0.75s 0.18s cubic-bezier(0.22, 1, 0.36, 1) both;
+        }
       }
       @media (max-width: 680px) {
         .wrap {
           width: calc(100% - 36px);
         }
+        header {
+          padding: 22px 0;
+        }
+        .brand {
+          font-size: 15px;
+        }
+        .version {
+          display: none;
+        }
+        nav {
+          gap: 16px;
+        }
+        header nav .changelog {
+          display: none;
+        }
+        .nav-download {
+          padding: 9px 13px;
+        }
         .hero {
-          padding: 48px 0;
+          padding-top: 52px;
         }
         .intro {
-          font-size: 19px;
+          font-size: 16px;
+          max-width: 350px;
         }
-        .grid,
-        .connect {
-          grid-template-columns: 1fr;
-          gap: 28px;
+        .stage {
+          margin-top: 42px;
+          padding: 30px 16px 22px;
+          border-radius: 23px;
+        }
+        .demo-content {
+          padding: 22px 12px 14px;
+        }
+        .demo-top {
+          padding: 15px;
+        }
+        .demo-footer {
+          padding: 13px 14px;
+          font-size: 10px;
+        }
+        .provider-switch button {
+          position: relative;
+          z-index: 1;
+          width: 120px;
+          padding: 8px 14px;
         }
         section {
-          padding: 44px 0;
+          padding-top: 72px;
+        }
+        .steps {
+          grid-template-columns: 1fr;
+          gap: 18px;
+        }
+        .steps {
+          gap: 25px;
+        }
+        .steps li {
+          position: relative;
+          padding-left: 48px;
         }
         .steps li::before {
-          margin-bottom: 8px;
+          position: absolute;
+          left: 0;
+          top: 0;
+        }
+        .steps p {
+          margin-bottom: 0;
         }
         footer {
           flex-direction: column;
+          align-items: center;
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        html {
+          scroll-behavior: auto;
+        }
+        *,
+        *::before,
+        *::after {
+          transition: none !important;
         }
       }
     </style>
@@ -290,151 +605,149 @@
     <div class="wrap">
       <header>
         <a class="brand" href="./"
-          ><img src="assets/icon.png" alt="" width="36" height="36" />Session Limits</a
+          ><img src="assets/icon.png" width="32" height="32" alt="" />Session Limits<span class="version"
+            >v1.2</span
+          ></a
         >
-        <a href="https://github.com/vkalipat/raycast-session-limits">View source ↗</a>
+        <nav aria-label="Main navigation">
+          <a href="#faq">FAQ</a
+          ><a class="changelog" href="https://github.com/vkalipat/raycast-session-limits/releases"
+            >Changelog</a
+          ><a class="nav-download" href="#install">Download ↓</a>
+        </nav>
       </header>
       <main id="main">
         <div class="hero">
-          <p class="eyebrow">A free Raycast extension for Mac</p>
-          <h1>Know what’s left.<br />Keep building.</h1>
+          <h1>Your limits.<br />Right in <span class="highlight">Raycast.</span></h1>
           <p class="intro">
-            Your Codex and Claude Code quotas in one place. Check remaining usage, see when limits reset, and
-            keep a glanceable indicator in your menu bar.
+            A little clarity for your next big idea.<br />Codex and Claude Code quotas, at a glance.
           </p>
           <div class="actions">
             <a
               class="button primary"
               href="https://github.com/vkalipat/raycast-session-limits/releases/latest/download/session-limits.zip"
-              >Download for Raycast ↓</a
+              ><span aria-hidden="true">↓</span> Download for Mac</a
+            ><a class="button secondary" href="https://github.com/vkalipat/raycast-session-limits"
+              >Star on GitHub <span class="pill">Free · MIT</span></a
             >
-            <a class="button" href="https://github.com/vkalipat/raycast-session-limits">Star on GitHub ☆</a>
           </div>
-          <p class="note">Free · MIT licensed · No terminal needed to install</p>
+          <p class="tiny">For Raycast on macOS.</p>
+          <div class="stage">
+            <div class="demo" aria-label="Interactive quota demo">
+              <div class="demo-top">
+                <span class="traffic" aria-hidden="true"><i></i><i></i><i></i></span
+                ><span>Session Limits</span><span aria-hidden="true">⌘ K</span>
+              </div>
+              <div class="demo-content">
+                <div class="provider-switch" role="group" aria-label="Demo provider">
+                  <button type="button" data-provider="codex" aria-pressed="true">Codex</button
+                  ><button type="button" data-provider="claude" aria-pressed="false">Claude Code</button>
+                </div>
+                <div class="window-switch" role="group" aria-label="Demo quota window">
+                  <button type="button" data-window="session" aria-pressed="true">Session</button
+                  ><button type="button" data-window="weekly" aria-pressed="false">Weekly</button>
+                </div>
+                <svg
+                  class="gauge"
+                  viewBox="0 0 360 275"
+                  role="img"
+                  aria-label="Codex session: 72 percent remaining"
+                >
+                  <title id="gauge-title">Codex session: 72 percent remaining</title>
+                  <path class="gauge-track" d="M 52 173 A 128 128 0 0 1 308 173" />
+                  <path
+                    id="gauge-fill"
+                    class="gauge-value"
+                    d="M 52 173 A 128 128 0 0 1 308 173"
+                    pathLength="100"
+                    stroke-dasharray="100"
+                    stroke-dashoffset="28"
+                  />
+                  <line
+                    id="gauge-needle"
+                    class="needle"
+                    x1="180"
+                    y1="173"
+                    x2="79"
+                    y2="173"
+                    style="transform: rotate(129.6deg)"
+                  />
+                  <circle cx="180" cy="173" r="6" fill="#ffe6d0" />
+                  <text id="gauge-number" class="gauge-number" x="180" y="232" text-anchor="middle">72%</text>
+                  <text class="gauge-label" x="180" y="253" text-anchor="middle">remaining</text>
+                  <text class="gauge-label" x="50" y="200" text-anchor="middle">0</text>
+                  <text class="gauge-label" x="310" y="200" text-anchor="middle">100</text>
+                </svg>
+              </div>
+              <div class="demo-footer">
+                <span>Resets in <strong id="reset">2h 14m</strong></span
+                ><span><strong>Demo</strong></span>
+              </div>
+            </div>
+            <p
+              id="demo-announcement"
+              class="tiny"
+              role="status"
+              style="position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%)"
+            ></p>
+          </div>
         </div>
-        <figure class="preview">
-          <img
-            src="media/session-limits-detail.png"
-            alt="Session Limits detail view in Raycast, with a visual quota gauge and reset information."
-            width="2000"
-            height="1250"
-            fetchpriority="high"
-          />
-          <figcaption>Example readings shown for illustration.</figcaption>
-        </figure>
-        <section aria-label="Features">
-          <div class="grid">
-            <article>
-              <h3>One place to check</h3>
-              <p>
-                Session and weekly windows for Codex and Claude Code. A shared format keeps room for other
-                providers, too.
-              </p>
-            </article>
-            <article>
-              <h3>More than a number</h3>
-              <p>
-                A visual gauge, reset times, and reading freshness help you see what your remaining quota
-                actually means.
-              </p>
-            </article>
-            <article>
-              <h3>Stay in your flow</h3>
-              <p>
-                Open Raycast for the details, or enable the menu bar command for a quick glance while you
-                work.
-              </p>
-            </article>
-          </div>
-        </section>
         <section id="install">
-          <p class="eyebrow">Start here</p>
-          <h2>Three steps. No install scripts.</h2>
-          <ol class="steps grid">
+          <div class="section-head">
+            <p class="eyebrow">Up and running</p>
+            <h2>Ready in three steps.</h2>
+          </div>
+          <ol class="steps">
             <li>
               <h3>Download &amp; unzip</h3>
-              <p>
-                Get the ZIP above and open it in Finder. You’ll get a folder called
-                <strong>Session Limits</strong>.
-              </p>
+              <p>Open the ZIP in Finder. Inside is a folder named <strong>Session Limits</strong>.</p>
             </li>
             <li>
               <h3>Import into Raycast</h3>
-              <p>
-                Search for <strong>Import Extension</strong> in Raycast, then select that Session Limits
-                folder.
-              </p>
+              <p>Run <strong>Import Extension</strong> in Raycast and choose that folder.</p>
             </li>
             <li>
-              <h3>Check your limits</h3>
-              <p>
-                Run <strong>Show Session Limits</strong>. Open any quota row to see the gauge and reset
-                details.
-              </p>
+              <h3>See what’s left</h3>
+              <p>Run <strong>Show Session Limits</strong>. Open a quota row for its gauge and reset time.</p>
             </li>
           </ol>
-          <p class="note">GitHub download available now. Raycast Store publication is pending review.</p>
         </section>
-        <section class="connect">
-          <div>
-            <h2>Connect what you use.</h2>
-            <article>
-              <h3>Codex</h3>
-              <p>
-                Already signed in to Codex on this Mac? Session Limits reads quotas through the official Codex
-                CLI.
-              </p>
-            </article>
-            <article>
-              <h3>Claude Code</h3>
-              <p>
-                Choose <strong>Connect Claude Code</strong>, then use Claude Code to update your reading. Uses
-                its official status line quota data and preserves your existing status line. Requires Claude
-                Code 2.1.251+ and a Pro or Max plan.
-              </p>
-            </article>
-            <article>
-              <h3>Your own provider</h3>
-              <p>
-                Supply a local JSON snapshot using the documented format. The same quota view works with your
-                data.
-              </p>
-            </article>
+        <section id="faq" class="faq">
+          <div class="section-head">
+            <p class="eyebrow">Good questions</p>
+            <h2>Good to know.</h2>
           </div>
-          <aside class="privacy">
-            <h3>Small by design.</h3>
+          <details>
+            <summary>How do I connect my providers?</summary>
             <p>
-              No backend, no analytics, and no account with us. Claude’s connector reads quota data, without
-              requesting your tokens or Keychain access.
+              Codex uses your existing CLI sign-in. For Claude Code, choose
+              <strong>Connect Claude Code</strong>, then use Claude to update your reading. Requires Claude
+              Code 2.1.251+ and Pro or Max; your existing status line is preserved.
             </p>
+          </details>
+          <details>
+            <summary>Is it in the Raycast Store?</summary>
             <p>
-              <a href="https://github.com/vkalipat/raycast-session-limits#privacy"
-                >Read about privacy and setup →</a
-              >
+              The
+              <a href="https://github.com/raycast/extensions/pull/31698"
+                >Store submission is awaiting review</a
+              >. Install the GitHub download with Raycast’s <strong>Import Extension</strong> command today.
             </p>
-          </aside>
-        </section>
-        <section>
-          <h2>Your limits, at a glance.</h2>
-          <figure class="preview">
-            <img
-              src="media/session-limits-dashboard.png"
-              alt="Session Limits dashboard in Raycast, listing provider quota windows and remaining usage."
-              width="2000"
-              height="1250"
-              loading="lazy"
-            />
-            <figcaption>Example readings shown for illustration.</figcaption>
-          </figure>
-          <p>
-            Missing a provider or have an idea?
-            <a href="https://github.com/vkalipat/raycast-session-limits/issues">Open an issue</a>. If this
-            saves you a few clicks, a GitHub star helps others find it.
-          </p>
+          </details>
+          <details>
+            <summary>Can I add another provider?</summary>
+            <p>
+              Yes — use the
+              <a href="https://github.com/vkalipat/raycast-session-limits/blob/main/docs/providers.md"
+                >local JSON format</a
+              >, or
+              <a href="https://github.com/vkalipat/raycast-session-limits/issues">request an integration</a>.
+            </p>
+          </details>
         </section>
       </main>
       <footer>
-        <span>Session Limits · Free &amp; open source</span>
+        <span>Session Limits · Made for your Mac.</span>
         <nav aria-label="Project links">
           <a href="https://github.com/vkalipat/raycast-session-limits">GitHub</a
           ><a href="https://github.com/vkalipat/raycast-session-limits/releases">Releases</a
@@ -442,5 +755,73 @@
         </nav>
       </footer>
     </div>
+    <script>
+      (() => {
+        const samples = {
+          codex: { session: [72, "2h 14m"], weekly: [58, "3d 8h"] },
+          claude: { session: [84, "3h 42m"], weekly: [41, "4d 6h"] },
+        };
+        let provider = "codex",
+          windowName = "session",
+          displayed = 72,
+          animation = 0;
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const number = document.getElementById("gauge-number");
+        const resetLabel = document.getElementById("reset");
+        const update = () => {
+          const [remaining, reset] = samples[provider][windowName];
+          const name = provider === "codex" ? "Codex" : "Claude Code";
+          document.querySelector(".provider-switch").dataset.active = provider;
+          document
+            .querySelectorAll("[data-provider]")
+            .forEach((button) =>
+              button.setAttribute("aria-pressed", String(button.dataset.provider === provider)),
+            );
+          document
+            .querySelectorAll("[data-window]")
+            .forEach((button) =>
+              button.setAttribute("aria-pressed", String(button.dataset.window === windowName)),
+            );
+          document.getElementById("gauge-fill").style.strokeDashoffset = String(100 - remaining);
+          document.getElementById("gauge-needle").style.transform = `rotate(${remaining * 1.8}deg)`;
+          cancelAnimationFrame(animation);
+          if (reducedMotion.matches) {
+            displayed = remaining;
+            number.textContent = `${remaining}%`;
+          } else {
+            const from = displayed,
+              start = performance.now();
+            const tick = (now) => {
+              const progress = Math.min((now - start) / 450, 1);
+              displayed = from + (remaining - from) * (1 - Math.pow(1 - progress, 3));
+              number.textContent = `${Math.round(displayed)}%`;
+              if (progress < 1) animation = requestAnimationFrame(tick);
+            };
+            animation = requestAnimationFrame(tick);
+          }
+          resetLabel.getAnimations().forEach((animation) => animation.cancel());
+          resetLabel.textContent = reset;
+          if (!reducedMotion.matches)
+            resetLabel.animate([{ opacity: 0.25 }, { opacity: 1 }], { duration: 300, easing: "ease-out" });
+          const description = `${name} ${windowName}: ${remaining} percent remaining`;
+          document.getElementById("gauge-title").textContent = description;
+          document.querySelector(".gauge").setAttribute("aria-label", description);
+          document.getElementById("demo-announcement").textContent =
+            `Demo: ${name} ${windowName}, ${remaining}% remaining, resets in ${reset}.`;
+        };
+        document.querySelectorAll("[data-provider]").forEach((button) =>
+          button.addEventListener("click", () => {
+            provider = button.dataset.provider;
+            update();
+          }),
+        );
+        document.querySelectorAll("[data-window]").forEach((button) =>
+          button.addEventListener("click", () => {
+            windowName = button.dataset.window;
+            update();
+          }),
+        );
+      })();
+    </script>
   </body>
 </html>

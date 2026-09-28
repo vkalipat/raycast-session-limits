@@ -6,9 +6,9 @@ A lightweight **Raycast extension for Codex and Claude Code usage limits**. See 
 
 Provider-neutral adapters also support [custom quota snapshots](docs/providers.md) from other coding assistants.
 
-**[Download for macOS](https://github.com/vkalipat/raycast-session-limits/releases/latest/download/session-limits.zip)** · [Changelog](CHANGELOG.md) · [Report a bug](https://github.com/vkalipat/raycast-session-limits/issues/new/choose)
+[Website](https://vkalipat.github.io/raycast-session-limits/) · **[Download for macOS](https://github.com/vkalipat/raycast-session-limits/releases/latest/download/session-limits.zip)** · [Changelog](CHANGELOG.md) · [Report a bug](https://github.com/vkalipat/raycast-session-limits/issues/new/choose)
 
-Raycast Store publication is pending. Use the GitHub download below in the meantime.
+[Submitted to the Raycast Store](https://github.com/raycast/extensions/pull/31698); awaiting review. Install from GitHub in the meantime.
 
 ![Session Limits quota gauge in Raycast](media/session-limits-detail.png)
 
@@ -36,7 +36,7 @@ Sign in to the provider’s official app or CLI first. Claude Code requires vers
 
 ## Use
 
-- **Enter** opens quota details, including exact reset times.
+- **Enter** opens a speedometer for that quota, with exact reset times.
 - **⌘R** refreshes your limits.
 - **Session Limits Menu Bar** adds an optional menu-bar view with refresh about every five minutes.
 
@@ -46,7 +46,7 @@ The menu-bar percentage is the lowest remaining quota across current readings. F
 
 No server, telemetry, or browser scraping. The extension never reads or stores provider credentials. Codex uses its official CLI; Claude Code supplies quota metadata through its documented status-line interface. Only quota snapshots go into the display cache. Connecting Claude updates its local status-line setting; disconnecting restores the prior setting when the integration is still installed.
 
-These are subscription limits, not API billing or context-window usage. [Compatibility and credential details →](docs/providers.md#compatibility)
+Shows subscription usage limits. [Compatibility and credential details →](docs/providers.md#compatibility)
 
 ## Develop
 
@@ -67,7 +67,7 @@ See [Contributing](CONTRIBUTING.md) to propose an adapter or improve compatibili
 
 ## Credits
 
-Compatibility research: [CodexBar](https://github.com/steipete/CodexBar), [claude-codex-usage](https://github.com/jun1485/claude-codex-usage), and [OpenAI Codex](https://github.com/openai/codex). Independently implemented; no upstream code bundled. Unaffiliated with the providers or Raycast.
+Compatibility research: [CodexBar](https://github.com/steipete/CodexBar), [claude-codex-usage](https://github.com/jun1485/claude-codex-usage), and [OpenAI Codex](https://github.com/openai/codex).
 
 If Session Limits is useful, [star the project](https://github.com/vkalipat/raycast-session-limits) to help others find it.
 
