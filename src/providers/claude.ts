@@ -4,6 +4,9 @@ import type { ProviderOptions, ProviderSnapshot, UsageWindow } from "../core/typ
 import { claudeKeychain, configHome, readCredentials } from "./credentials";
 import { fetchUsage } from "./http";
 import { isoDate, percent, record, text } from "./parsing";
+import { ConnectionRequired, UsageAccessError } from "../core/errors";
+
+export const CLAUDE_CONNECTION_KEY = "claude-access-v1";
 
 export function parseClaudeUsage(data: unknown): UsageWindow[] {
   const root = record(data);
@@ -56,37 +59,86 @@ export function parseClaudeUsage(data: unknown): UsageWindow[] {
   return windows;
 }
 export async function fetchClaude(options: ProviderOptions): Promise<ProviderSnapshot> {
+  if (options.claudeDisconnected && !options.keychainInteractive) throw new ConnectionRequired();
   const home = configHome(options.claudeConfigDir, process.env.CLAUDE_CONFIG_DIR, ".claude");
   let credentials = await readCredentials(join(home, ".credentials.json"));
   let source = "Claude Code OAuth file";
   const defaultHome = home === resolve(homedir(), ".claude");
-  if (!credentials && defaultHome && options.allowKeychain) {
-    credentials = await claudeKeychain(options.keychainInteractive !== false);
-    source = "Claude Code OAuth Keychain";
+  let importingConnection = false;
+  if (!credentials && defaultHome) {
+    source = "Claude Code connection";
+    if (options.keychainInteractive) {
+      credentials = await claudeKeychain();
+      importingConnection = true;
+    } else {
+      const saved = await options.credentialStore?.get(CLAUDE_CONNECTION_KEY);
+      if (saved) {
+        try {
+          credentials = { claudeAiOauth: record(JSON.parse(saved)) };
+        } catch {
+          await options.credentialStore?.remove(CLAUDE_CONNECTION_KEY);
+        }
+      }
+    }
+    if (!credentials) throw new ConnectionRequired();
   }
   const oauth = record(credentials?.claudeAiOauth);
   const token = text(oauth.accessToken);
   if (!token)
     throw new Error(
-      "Sign in with `claude` using a Claude subscription. Enable Keychain access if Claude stores your login there. API keys and setup-token do not provide usage access.",
+      "Sign in to Claude Code with a subscription account, then reconnect. API keys do not include subscription limits.",
     );
   if (Array.isArray(oauth.scopes) && !oauth.scopes.includes("user:profile"))
     throw new Error(
-      "Claude's token lacks usage access. Sign in again through `claude`; setup-token is for inference only.",
+      "Your Claude sign-in does not include usage access. Sign in to Claude Code with a subscription account.",
     );
   if (
     typeof oauth.expiresAt === "number" &&
     Number.isFinite(oauth.expiresAt) &&
     oauth.expiresAt <= Date.now()
-  )
-    throw new Error("Claude sign-in expired. Open Claude Code to renew it, then refresh.");
-  const data = await fetchUsage(
-    "https://api.anthropic.com/api/oauth/usage",
-    { Authorization: `Bearer ${token}`, "anthropic-beta": "oauth-2025-04-20" },
-    "Claude",
-  );
+  ) {
+    if (source === "Claude Code connection") {
+      await options.credentialStore?.remove(CLAUDE_CONNECTION_KEY);
+      throw new ConnectionRequired("Open Claude Code to renew your sign-in, then reconnect here.");
+    }
+    throw new Error("Open Claude Code to renew your sign-in, then refresh.");
+  }
+  let data: unknown;
+  try {
+    data = await fetchUsage(
+      "https://api.anthropic.com/api/oauth/usage",
+      { Authorization: `Bearer ${token}`, "anthropic-beta": "oauth-2025-04-20" },
+      "Claude",
+    );
+  } catch (error) {
+    if (source === "Claude Code connection" && error instanceof UsageAccessError) {
+      await options.credentialStore?.remove(CLAUDE_CONNECTION_KEY);
+      throw new ConnectionRequired(
+        "Your Claude connection needs updating. Open Claude Code, then reconnect here.",
+      );
+    }
+    throw error;
+  }
   const windows = parseClaudeUsage(data);
   if (!windows.length) throw new Error("Claude returned no supported subscription limits for this account.");
+  if (importingConnection) {
+    // Store only the access token, never the CLI's refresh token or full credential record.
+    const expiresAt =
+      typeof oauth.expiresAt === "number" && Number.isFinite(oauth.expiresAt)
+        ? oauth.expiresAt
+        : Date.now() + 30 * 60_000;
+    await options.credentialStore?.set(
+      CLAUDE_CONNECTION_KEY,
+      JSON.stringify({
+        accessToken: token,
+        expiresAt,
+        ...(text(oauth.subscriptionType) ? { subscriptionType: text(oauth.subscriptionType) } : {}),
+        ...(Array.isArray(oauth.scopes)
+          ? { scopes: oauth.scopes.filter((scope) => typeof scope === "string") }
+          : {}),
+      }),
+    );
+  }
   return {
     id: "claude",
     name: "Claude Code",

@@ -8,3 +8,4 @@ dist/
 !.env.example
 *.local.json
 raycast-env.d.ts
+release/

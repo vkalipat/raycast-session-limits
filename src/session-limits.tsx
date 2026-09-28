@@ -4,7 +4,7 @@ import { useLimits } from "./use-limits";
 import { ProviderActions, providerStatus, quotaColor } from "./ui";
 
 export default function SessionLimits() {
-  const { providers, isLoading, refresh } = useLimits();
+  const { providers, isLoading, refresh, connect, disconnect } = useLimits();
   return (
     <List isLoading={isLoading} searchBarPlaceholder="Search providers and limits…">
       <List.EmptyView
@@ -31,7 +31,7 @@ export default function SessionLimits() {
       />
       {providers.map((provider) => {
         const snapshot = provider.snapshot;
-        const outdated = provider.status === "error" || (snapshot && isStale(snapshot));
+        const outdated = provider.status !== "ready" || (snapshot && isStale(snapshot));
         return (
           <List.Section
             key={provider.id}
@@ -59,16 +59,36 @@ export default function SessionLimits() {
                       tooltip: `${window.usedPercent}% used. Source: ${snapshot.source}`,
                     },
                   ]}
-                  actions={<ProviderActions provider={provider} refresh={refresh} />}
+                  actions={
+                    <ProviderActions
+                      provider={provider}
+                      refresh={refresh}
+                      connect={connect}
+                      disconnect={disconnect}
+                    />
+                  }
                 />
               ))
             ) : (
               <List.Item
-                title={provider.error ? "Usage Unavailable" : "No Quota Windows"}
+                title={
+                  provider.needsConnection
+                    ? `Connect ${provider.name}`
+                    : provider.error
+                      ? "Usage Unavailable"
+                      : "No Quota Windows"
+                }
                 subtitle={provider.error ?? "The provider returned no limits."}
-                icon={Icon.QuestionMarkCircle}
+                icon={provider.needsConnection ? Icon.Link : Icon.QuestionMarkCircle}
                 keywords={[provider.name]}
-                actions={<ProviderActions provider={provider} refresh={refresh} />}
+                actions={
+                  <ProviderActions
+                    provider={provider}
+                    refresh={refresh}
+                    connect={connect}
+                    disconnect={disconnect}
+                  />
+                }
               />
             )}
           </List.Section>

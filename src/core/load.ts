@@ -2,6 +2,7 @@ import { fetchClaude } from "../providers/claude";
 import { fetchCodex } from "../providers/codex";
 import { fetchCustomProviders } from "../providers/custom";
 import type { ProviderSnapshot, ProviderState, Settings } from "./types";
+import { ConnectionRequired } from "./errors";
 
 export async function loadProviders(
   settings: Settings,
@@ -20,7 +21,8 @@ export async function loadProviders(
         {
           id,
           name,
-          status: "error",
+          status: error instanceof ConnectionRequired ? "setup" : "error",
+          needsConnection: error instanceof ConnectionRequired,
           error: error instanceof Error ? error.message : "Unable to load limits. Try refreshing.",
           snapshot: previous.find((item) => item.id === id)?.snapshot,
         },

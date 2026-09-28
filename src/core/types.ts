@@ -19,14 +19,22 @@ export interface ProviderSnapshot {
 export interface ProviderOptions {
   codexHome?: string;
   claudeConfigDir?: string;
-  allowKeychain: boolean;
+  credentialStore?: CredentialStore;
+  claudeDisconnected?: boolean;
   keychainInteractive?: boolean;
+}
+
+export interface CredentialStore {
+  get(key: string): Promise<string | undefined>;
+  set(key: string, value: string): Promise<void>;
+  remove(key: string): Promise<void>;
 }
 
 export interface ProviderState {
   id: string;
   name: string;
-  status: "ready" | "error";
+  status: "ready" | "error" | "setup";
+  needsConnection?: boolean;
   snapshot?: ProviderSnapshot;
   error?: string;
 }

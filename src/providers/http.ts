@@ -1,3 +1,5 @@
+import { UsageAccessError } from "../core/errors";
+
 export async function fetchUsage(
   url: string,
   headers: Record<string, string>,
@@ -15,9 +17,9 @@ export async function fetchUsage(
   }
   if (!response.ok) await response.body?.cancel().catch(() => undefined);
   if (response.status === 401)
-    throw new Error(`${provider} sign-in expired. Sign in again in its CLI, then refresh.`);
+    throw new UsageAccessError(`${provider} sign-in expired. Sign in again, then refresh.`, 401);
   if (response.status === 403)
-    throw new Error(`${provider} denied usage access. Sign in with a subscription account in its CLI.`);
+    throw new UsageAccessError(`${provider} denied usage access. Sign in with a subscription account.`, 403);
   if (response.status === 429)
     throw new Error(`${provider} is limiting usage checks. Wait a few minutes before refreshing.`);
   if (!response.ok)

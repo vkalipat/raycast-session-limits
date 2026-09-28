@@ -1,33 +1,15 @@
-import { open, realpath } from "node:fs/promises";
+import { open } from "node:fs/promises";
+import { constants } from "node:fs";
 import { homedir } from "node:os";
 import { isAbsolute, join, resolve } from "node:path";
-import { createHash } from "node:crypto";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
+import { ConnectionRequired } from "../core/errors";
 import { record, text } from "./parsing";
+
 const run = promisify(execFile);
 const MAX_CREDENTIAL_BYTES = 1024 * 1024;
-// Static script: service/account are arguments, never interpolated into code.
-const KEYCHAIN_READER = `
-ObjC.import('Foundation');
-ObjC.import('Security');
-function run(argv) {
-  var interactive = argv[2] === "interactive";
-  if (!interactive) $.SecKeychainSetUserInteractionAllowed(false);
-  var query = $.NSMutableDictionary.alloc.init;
-  query.setObjectForKey(ObjC.castRefToObject($.kSecClassGenericPassword), ObjC.castRefToObject($.kSecClass));
-  query.setObjectForKey($(argv[0]), ObjC.castRefToObject($.kSecAttrService));
-  if (argv[1]) query.setObjectForKey($(argv[1]), ObjC.castRefToObject($.kSecAttrAccount));
-  query.setObjectForKey($(true), ObjC.castRefToObject($.kSecReturnData));
-  query.setObjectForKey(ObjC.castRefToObject($.kSecMatchLimitOne), ObjC.castRefToObject($.kSecMatchLimit));
-  if (!interactive) query.setObjectForKey(ObjC.castRefToObject($.kSecUseAuthenticationUIFail), ObjC.castRefToObject($.kSecUseAuthenticationUI));
-  var result = Ref();
-  var status = $.SecItemCopyMatching(query, result);
-  if (status !== 0) return JSON.stringify({keychainStatus: status});
-  var data = ObjC.castRefToObject(result[0]);
-  if (data.length > 1048576) return '{}';
-  return ObjC.unwrap($.NSString.alloc.initWithDataEncoding(data, $.NSUTF8StringEncoding));
-}`;
+
 export function configHome(
   setting: string | undefined,
   environment: string | undefined,
@@ -36,12 +18,13 @@ export function configHome(
   const value = setting?.trim() || environment?.trim() || join(homedir(), fallback);
   const expanded =
     value === "~" ? homedir() : value.startsWith("~/") ? join(homedir(), value.slice(2)) : value;
-  if (!isAbsolute(expanded)) throw new Error("Set the credential directory to an absolute path (or ~/path).");
+  if (!isAbsolute(expanded)) throw new Error("Choose an absolute path for the account directory.");
   return resolve(expanded);
 }
+
 export async function readCredentials(path: string): Promise<Record<string, unknown> | undefined> {
   try {
-    const handle = await open(path, "r");
+    const handle = await open(path, constants.O_RDONLY | constants.O_NONBLOCK);
     try {
       const stat = await handle.stat();
       if (!stat.isFile() || stat.size > MAX_CREDENTIAL_BYTES) throw new Error("Invalid credential file");
@@ -59,56 +42,31 @@ export async function readCredentials(path: string): Promise<Record<string, unkn
     }
   } catch (error) {
     if (record(error).code === "ENOENT") return undefined;
-    throw new Error(
-      "The CLI credential file could not be read. Check its permissions or sign in again in the CLI.",
-    );
+    throw new Error("Your saved sign-in could not be read. Reopen the provider app and sign in again.");
   }
 }
-async function keychain(
-  service: string,
-  account?: string,
-  interactive = false,
-): Promise<Record<string, unknown> | undefined> {
-  if (process.platform !== "darwin") return undefined;
-  let value: Record<string, unknown>;
+
+// Only the user's Connect action calls this. Automatic refresh never invokes Keychain tools.
+export async function claudeKeychain(): Promise<Record<string, unknown>> {
+  if (process.platform !== "darwin") throw new ConnectionRequired("Connect Claude Code on your Mac.");
   try {
-    const args = [
-      "-l",
-      "JavaScript",
-      "-e",
-      KEYCHAIN_READER,
-      service,
-      account ?? "",
-      interactive ? "interactive" : "silent",
-    ];
-    const { stdout } = await run("/usr/bin/osascript", args, {
-      timeout: 15_000,
-      maxBuffer: MAX_CREDENTIAL_BYTES,
-    });
-    value = record(JSON.parse(stdout));
-  } catch {
-    throw new Error(
-      "Keychain could not be read. Open Show Session Limits to allow Keychain access, then refresh.",
+    const { stdout } = await run(
+      "/usr/bin/security",
+      ["find-generic-password", "-s", "Claude Code-credentials", "-w"],
+      {
+        timeout: 60_000,
+        maxBuffer: MAX_CREDENTIAL_BYTES,
+        encoding: "utf8",
+      },
     );
+    return record(JSON.parse(stdout));
+  } catch (error) {
+    if (record(error).code === 44)
+      throw new ConnectionRequired("Sign in to Claude Code first, then choose Connect Claude Code.");
+    throw new ConnectionRequired("Connection was not completed. Choose Connect Claude Code to try again.");
   }
-  if (value.keychainStatus === -25300) return undefined;
-  if (typeof value.keychainStatus === "number")
-    throw new Error(
-      "Keychain access is unavailable. Unlock your Keychain and open Show Session Limits to allow access.",
-    );
-  return value;
 }
-export async function codexKeychain(
-  home: string,
-  interactive = false,
-): Promise<Record<string, unknown> | undefined> {
-  const canonical = await realpath(home).catch(() => home);
-  const account = `cli|${createHash("sha256").update(canonical).digest("hex").slice(0, 16)}`;
-  return keychain("Codex Auth", account, interactive);
-}
-export async function claudeKeychain(interactive = false): Promise<Record<string, unknown> | undefined> {
-  return keychain("Claude Code-credentials", undefined, interactive);
-}
+
 export function codexToken(value: Record<string, unknown>): { token: string; account?: string } | undefined {
   const tokens = record(value.tokens);
   const token = text(tokens.access_token) || text(tokens.accessToken);

@@ -9,9 +9,22 @@ export function quotaColor(window: UsageWindow): Color {
 }
 
 export function providerStatus(provider: ProviderState): string {
+  if (provider.status === "setup") return "Not Connected";
   if (provider.status === "error")
     return provider.snapshot ? "Refresh failed · previous reading" : "Unavailable";
   return provider.snapshot && isStale(provider.snapshot) ? "Stale reading" : "Current reading";
+}
+
+export function providerDashboard(provider: ProviderState): string | undefined {
+  return (
+    provider.snapshot?.dashboardUrl ??
+    (
+      {
+        claude: "https://claude.ai/settings/usage",
+        codex: "https://chatgpt.com/codex/settings/usage",
+      } as Record<string, string>
+    )[provider.id]
+  );
 }
 
 function escapeMarkdown(value: string): string {
@@ -21,14 +34,22 @@ function escapeMarkdown(value: string): string {
 export function ProviderActions({
   provider,
   refresh,
+  connect,
+  disconnect,
   detail = false,
 }: {
   provider: ProviderState;
   refresh: () => Promise<void>;
+  connect: (id: string) => Promise<void>;
+  disconnect: (id: string) => Promise<void>;
   detail?: boolean;
 }) {
+  const dashboardUrl = providerDashboard(provider);
   return (
     <ActionPanel>
+      {provider.needsConnection && (
+        <Action title={`Connect ${provider.name}`} icon={Icon.Link} onAction={() => connect(provider.id)} />
+      )}
       {!detail && (
         <Action.Push
           title="Show Details"
@@ -42,16 +63,20 @@ export function ProviderActions({
         shortcut={Keyboard.Shortcut.Common.Refresh}
         onAction={refresh}
       />
-      {provider.snapshot?.dashboardUrl && (
-        <Action.OpenInBrowser title="Open Provider Dashboard" url={provider.snapshot.dashboardUrl} />
+      {provider.id === "claude" && provider.snapshot && !provider.needsConnection && (
+        <Action title="Reconnect Claude Code" icon={Icon.Link} onAction={() => connect(provider.id)} />
       )}
+      {provider.id === "claude" && provider.snapshot && (
+        <Action title="Disconnect Claude Code" icon={Icon.Logout} onAction={() => disconnect(provider.id)} />
+      )}
+      {dashboardUrl && <Action.OpenInBrowser title="Open Provider Dashboard" url={dashboardUrl} />}
       <Action title="Open Extension Preferences" icon={Icon.Gear} onAction={openExtensionPreferences} />
     </ActionPanel>
   );
 }
 
 export function ProviderDetail({ initialProvider }: { initialProvider: ProviderState }) {
-  const { providers, isLoading, refresh } = useLimits();
+  const { providers, isLoading, refresh, connect, disconnect } = useLimits();
   const currentProvider = providers.find((item) => item.id === initialProvider.id);
   const removed = !isLoading && !currentProvider;
   const provider: ProviderState =
@@ -73,9 +98,7 @@ export function ProviderDetail({ initialProvider }: { initialProvider: ProviderS
       (window) =>
         `### ${escapeMarkdown(window.label)}\n\n**${remainingPercent(window)}% remaining** · ${window.usedPercent}% used\n\n${escapeMarkdown(formatReset(window.resetAt))}${window.resetAt && Number.isFinite(Date.parse(window.resetAt)) ? `\n\nReset time: ${escapeMarkdown(new Date(window.resetAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "long" }))}` : ""}`,
     ) ?? []),
-    !snapshot && !removed
-      ? "Sign in with the provider’s CLI, then refresh. For a custom provider, check the snapshot file selected in extension preferences."
-      : "",
+    !snapshot && !removed ? "Connect your existing account to show its limits." : "",
     snapshot && isStale(snapshot)
       ? "This reading may no longer reflect your current quota. A passed reset time does not confirm that usage has returned to zero."
       : "",
@@ -101,7 +124,15 @@ export function ProviderDetail({ initialProvider }: { initialProvider: ProviderS
           </Detail.Metadata>
         ) : undefined
       }
-      actions={<ProviderActions provider={provider} refresh={refresh} detail />}
+      actions={
+        <ProviderActions
+          provider={provider}
+          refresh={refresh}
+          connect={connect}
+          disconnect={disconnect}
+          detail
+        />
+      }
     />
   );
 }

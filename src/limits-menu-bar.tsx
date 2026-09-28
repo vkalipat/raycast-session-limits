@@ -1,7 +1,7 @@
 import { Icon, launchCommand, LaunchType, MenuBarExtra, open, openExtensionPreferences } from "@raycast/api";
 import { formatObserved, formatReset, isStale, remainingPercent } from "./core/format";
 import { useLimits } from "./use-limits";
-import { providerStatus } from "./ui";
+import { providerDashboard, providerStatus } from "./ui";
 
 export default function LimitsMenuBar() {
   const { providers, isLoading, refresh } = useLimits();
@@ -20,7 +20,14 @@ export default function LimitsMenuBar() {
     >
       {providers.map((provider) => (
         <MenuBarExtra.Section key={provider.id} title={provider.name}>
-          <MenuBarExtra.Item title={providerStatus(provider)} />
+          <MenuBarExtra.Item
+            title={providerStatus(provider)}
+            onAction={
+              provider.needsConnection
+                ? () => launchCommand({ name: "session-limits", type: LaunchType.UserInitiated })
+                : undefined
+            }
+          />
           {provider.snapshot?.windows.map((window) => (
             <MenuBarExtra.Item
               key={window.id}
@@ -35,10 +42,10 @@ export default function LimitsMenuBar() {
             />
           )}
           {provider.error && <MenuBarExtra.Item title={provider.error} icon={Icon.ExclamationMark} />}
-          {provider.snapshot?.dashboardUrl && (
+          {providerDashboard(provider) && (
             <MenuBarExtra.Item
               title={`Open ${provider.name} Dashboard`}
-              onAction={() => open(provider.snapshot!.dashboardUrl!)}
+              onAction={() => open(providerDashboard(provider)!)}
             />
           )}
         </MenuBarExtra.Section>

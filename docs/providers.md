@@ -38,19 +38,19 @@ This is illustrative data, not a live integration. Replace timestamps and percen
 
 ## Compatibility
 
-| Adapter     | Credential lookup                                                                                                                                            | Usage endpoint                               |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------- |
-| Codex       | `auth.json` in the selected directory, `$CODEX_HOME`, or `~/.codex`; then the matching `Codex Auth` Keychain item                                            | `https://chatgpt.com/backend-api/wham/usage` |
-| Claude Code | `.credentials.json` in the selected directory, `$CLAUDE_CONFIG_DIR`, or `~/.claude`; then `Claude Code-credentials` in Keychain for the default profile only | `https://api.anthropic.com/api/oauth/usage`  |
+| Adapter     | Authentication                                                                                 | Usage source                                |
+| ----------- | ---------------------------------------------------------------------------------------------- | ------------------------------------------- |
+| Codex       | Existing subscription sign-in managed by the installed official Codex CLI                      | Codex app-server account rate limits        |
+| Claude Code | Credential file, or explicit **Connect Claude Code** using the existing macOS Keychain sign-in | `https://api.anthropic.com/api/oauth/usage` |
 
-Codex sends the stored account ID when available. Claude sends the OAuth beta header and needs a normal subscription login with the `user:profile` scope. `claude setup-token` is not a replacement for this login.
+Codex uses its official CLI to access your account. The selected profile directory, `$CODEX_HOME`, or `~/.codex` determines the profile. The CLI owns its authentication lifecycle. When no CLI is installed, the extension can use an existing `auth.json` token with `https://chatgpt.com/backend-api/wham/usage`. That fallback endpoint and Claude's usage endpoint are undocumented and may change.
 
-Credential files take precedence. Explicit custom Claude profiles do not fall back to the default account's Keychain item. Codex's Keychain account is derived from its profile directory. Newer or third-party credential stores outside these formats are not supported.
+Claude checks `.credentials.json` in the selected directory, `$CLAUDE_CONFIG_DIR`, or `~/.claude`. Credential files take precedence. For the default profile, **Connect Claude Code** reads the existing `Claude Code-credentials` Keychain item through macOS's native `security` command. macOS may request approval. The extension stores only the access token and expiry in Raycast's encrypted local storage; never the refresh token. Background refresh does not read the system Keychain or display access prompts. Reconnect if the saved access token expires.
 
-Keychain reads use macOS Security APIs through the system JavaScript bridge. Background reads explicitly disallow interaction; open the dashboard to resolve access requests. The extension never changes Keychain items or grants itself access.
+Explicit custom Claude profiles do not fall back to the default account's Keychain item. Claude needs a normal subscription login with the `user:profile` scope; `claude setup-token` is not a replacement. The extension does not renew Claude credentials, modify Keychain items, or grant itself access. No AppleScript or JavaScript automation bridge is used.
 
-HTTP requests time out after 12 seconds, reject redirects, and cap JSON responses at 1 MiB. Command openings share a 60-second snapshot cache; **⌘R** explicitly requests a new reading. The dashboard updates age/reset labels while open but does not poll the network continuously. Raycast controls menu-bar scheduling and may delay background refresh.
+Claude HTTP requests time out after 12 seconds, reject redirects, and cap JSON responses at 1 MiB. Command openings share a 60-second snapshot cache; **⌘R** explicitly requests a new reading. The dashboard updates age/reset labels while open but does not poll the network continuously. Raycast controls menu-bar scheduling and may delay background refresh.
 
 The adapters expose only quota windows reported by the provider. Credits, spend, local transcript token estimates, and inferred allowances are outside this extension's scope. If a provider rejects access, its last reading is labeled as such and excluded from the menu-bar total.
 
-Protocol references: [CodexBar Codex](https://github.com/steipete/CodexBar/blob/main/docs/codex.md), [CodexBar Claude](https://github.com/steipete/CodexBar/blob/main/docs/claude.md), [Codex storage](https://github.com/openai/codex/blob/main/codex-rs/login/src/auth/storage.rs), and [Apple noninteractive Keychain queries](https://developer.apple.com/documentation/security/ksecuseauthenticationuifail).
+Protocol references: [Codex app-server](https://developers.openai.com/codex/app-server), [CodexBar Codex](https://github.com/steipete/CodexBar/blob/main/docs/codex.md), [CodexBar Claude](https://github.com/steipete/CodexBar/blob/main/docs/claude.md), [Codex storage](https://github.com/openai/codex/blob/main/codex-rs/login/src/auth/storage.rs), and [Raycast encrypted storage](https://developers.raycast.com/information/security).
