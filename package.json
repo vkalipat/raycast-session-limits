@@ -1,0 +1,115 @@
+{
+  "$schema": "https://www.raycast.com/schemas/extension.json",
+  "name": "session-limits",
+  "title": "Session Limits",
+  "description": "See coding assistant quotas and reset times in one lightweight dashboard.",
+  "icon": "icon.png",
+  "author": "vkalipat",
+  "license": "MIT",
+  "version": "1.0.0",
+  "private": true,
+  "platforms": [
+    "macOS"
+  ],
+  "categories": [
+    "Developer Tools",
+    "Productivity"
+  ],
+  "commands": [
+    {
+      "name": "session-limits",
+      "title": "Show Session Limits",
+      "description": "Check usage quotas and reset times for your coding assistants.",
+      "mode": "view",
+      "keywords": [
+        "codex",
+        "claude",
+        "quota",
+        "usage",
+        "rate",
+        "remaining"
+      ]
+    },
+    {
+      "name": "limits-menu-bar",
+      "title": "Session Limits Menu Bar",
+      "description": "Keep your remaining coding assistant quotas in the menu bar.",
+      "mode": "menu-bar",
+      "interval": "5m",
+      "disabledByDefault": true
+    }
+  ],
+  "preferences": [
+    {
+      "name": "enableCodex",
+      "type": "checkbox",
+      "title": "Providers",
+      "label": "Codex",
+      "description": "Read quota limits using your existing Codex sign-in.",
+      "default": true,
+      "required": false
+    },
+    {
+      "name": "enableClaude",
+      "type": "checkbox",
+      "title": "",
+      "label": "Claude Code",
+      "description": "Read quota limits using your existing Claude Code sign-in.",
+      "default": true,
+      "required": false
+    },
+    {
+      "name": "allowKeychain",
+      "type": "checkbox",
+      "title": "Credentials",
+      "label": "Use macOS Keychain",
+      "description": "Look for CLI credentials in Keychain when needed. The dashboard may ask for access; background refresh never prompts.",
+      "default": true,
+      "required": false
+    },
+    {
+      "name": "codexHome",
+      "type": "directory",
+      "title": "Codex Home",
+      "description": "Optional Codex profile directory containing auth.json. Defaults to CODEX_HOME or ~/.codex.",
+      "required": false
+    },
+    {
+      "name": "claudeConfigDir",
+      "type": "directory",
+      "title": "Claude Config Directory",
+      "description": "Optional Claude profile directory containing .credentials.json. Defaults to CLAUDE_CONFIG_DIR or ~/.claude.",
+      "required": false
+    },
+    {
+      "name": "customProviderFile",
+      "type": "file",
+      "title": "Custom Providers",
+      "description": "Optional local JSON file with quota snapshots for any other provider. See the README for the format.",
+      "required": false
+    }
+  ],
+  "scripts": {
+    "build": "ray build -e dist -o dist",
+    "dev": "ray develop",
+    "lint": "eslint src",
+    "lint:fix": "eslint src --fix",
+    "lint:store": "ray lint",
+    "bundle": "ray bundle -o session-limits.rayext",
+    "typecheck": "tsc --noEmit",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "check": "npm run typecheck && npm run lint && npm run format:check && npm run build"
+  },
+  "dependencies": {
+    "@raycast/api": "^2.5.3"
+  },
+  "devDependencies": {
+    "@raycast/eslint-config": "^2.2.0",
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "eslint": "^10.11.0",
+    "prettier": "^3.0.0",
+    "typescript": "^5.9.0"
+  }
+}
